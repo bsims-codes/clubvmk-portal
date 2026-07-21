@@ -560,6 +560,30 @@
   },
   "image": "assets/bg/antisora.jpg"
  },
+ "flo": {
+  "name": "Flo's V8 Caf\u00e9",
+  "bg": [
+   12,
+   10,
+   20
+  ],
+  "panel": [
+   28,
+   20,
+   42
+  ],
+  "accent": [
+   255,
+   80,
+   160
+  ],
+  "fx": "image",
+  "unlock": {
+   "type": "club",
+   "cost": 15
+  },
+  "image": "assets/bg/flo-v8.jpg"
+ },
  "synthwave": {
   "name": "Synthwave (animated)",
   "bg": [
