@@ -27,10 +27,6 @@ async function boot() {
   ]);
   for (const it of cat) S.catalog[it.id] = it;
   S.themes = thm;
-  try {
-    S.guildNames = await fetch(CFG.SUPABASE_URL + "/storage/v1/object/public/previews/guilds.json")
-      .then((r) => (r.ok ? r.json() : {}));
-  } catch { S.guildNames = {}; }
 
   $("#signInBtn").onclick = signIn;
   sb.auth.onAuthStateChange((_e, session) => render(session));
@@ -87,6 +83,13 @@ async function loadData() {
     "No inventory has synced for your account yet. Once the bot's sync is live, your items will appear here.");
 
   S.guild = S.guild && S.guilds.includes(S.guild) ? S.guild : S.guilds[0];
+  // Server names come only from YOUR own profiles rows (RLS-scoped) — never a
+  // public list. If the guild_name column doesn't exist yet, labels fall back.
+  S.guildNames = {};
+  try {
+    const { data: gn } = await sb.from("profiles").select("guild_id,guild_name");
+    for (const r of gn || []) if (r.guild_name) S.guildNames[r.guild_id] = r.guild_name;
+  } catch { /* column not added yet — use fallback labels */ }
   renderGuildBar();
   S.inv = rows.filter((r) => r.guild_id === S.guild).map((r) => ({ item_id: r.item_id, count: r.count }));
 
