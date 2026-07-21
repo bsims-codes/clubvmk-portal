@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CLUBVMK · Collector's Vault</title>
+<meta name="description" content="Customize your CLUBVMK Collector profile — themes, backgrounds, featured items, and your inventory." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+<div class="stars" aria-hidden="true"></div>
+<div class="aurora" aria-hidden="true"></div>
+
+<header class="topbar">
+  <a class="brand" href="./">
+    <span class="brand-mark">✦</span>
+    <span class="brand-word">CLUB<em>VMK</em></span>
+    <span class="brand-sub">Collector's Vault</span>
+  </a>
+  <div id="authSlot" class="auth-slot"></div>
+</header>
+
+<!-- SIGNED OUT -->
+<main id="landing" class="landing hidden">
+  <div class="landing-inner">
+    <p class="eyebrow">Your collection, unlocked</p>
+    <h1 class="hero-title">Curate your <em>collector</em> profile.</h1>
+    <p class="hero-lede">Browse every item you've caught, equip themes &amp; backgrounds,
+      choose what you show off — and preview your card, all in one place.</p>
+    <button id="signInBtn" class="btn-discord">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M20.3 4.4A19.8 19.8 0 0 0 15.4 3l-.24.5a15 15 0 0 1 4.3 1.4A16.7 16.7 0 0 0 5.6 4.9 14.9 14.9 0 0 1 8.8 3.5L8.6 3A19.8 19.8 0 0 0 3.7 4.4C1 8.4.3 12.3.5 16.2a19.9 19.9 0 0 0 6 3l.8-1.3c-.6-.2-1.2-.5-1.7-.8l.4-.3a14.2 14.2 0 0 0 12 0l.4.3c-.5.3-1.1.6-1.7.8l.8 1.3a19.9 19.9 0 0 0 6-3c.3-4.5-.6-8.4-3.4-11.8ZM8.6 13.9c-1 0-1.7-.9-1.7-2s.8-2 1.7-2 1.7.9 1.7 2-.7 2-1.7 2Zm6.8 0c-1 0-1.7-.9-1.7-2s.8-2 1.7-2 1.7.9 1.7 2-.7 2-1.7 2Z"/></svg>
+      Sign in with Discord
+    </button>
+    <p id="landingNote" class="landing-note"></p>
+  </div>
+  <div class="landing-card" aria-hidden="true">
+    <div class="lc-glow"></div>
+    <div class="lc-inner">
+      <div class="lc-avatar"></div>
+      <div class="lc-lines"><span></span><span></span></div>
+      <div class="lc-tiles"><i></i><i></i><i></i></div>
+      <div class="lc-show"><b></b><b></b><b></b></div>
+    </div>
+  </div>
+</main>
+
+<!-- SIGNED IN -->
+<main id="app" class="app hidden">
+  <div id="guildBar" class="guild-bar hidden"></div>
+
+  <div class="app-grid">
+    <!-- LEFT: live preview + save -->
+    <section class="panel preview-panel">
+      <div class="panel-head"><h2>Preview</h2><span id="saveState" class="save-state"></span></div>
+      <div id="cardPreview" class="card-preview"><div class="empty">Sign in to load your card…</div></div>
+      <div class="preview-actions">
+        <button id="renderBtn" class="btn ghost" title="Render the exact /profile card via the bot">⟳ Render exact card</button>
+        <button id="saveBtn" class="btn gold">Save changes</button>
+      </div>
+      <p class="hint">Live preview is an approximation — “Render exact card” asks the bot for the real image.</p>
+    </section>
+
+    <!-- RIGHT: editor + inventory -->
+    <section class="stack">
+      <div class="panel">
+        <div class="panel-head"><h2>Identity</h2></div>
+        <label class="field"><span>Bio</span>
+          <input id="bioInput" maxlength="80" placeholder="A short tagline (80 chars)…" />
+        </label>
+        <label class="field"><span>Accent colour</span>
+          <span class="color-row">
+            <input id="colorInput" type="color" />
+            <button id="colorReset" class="btn tiny ghost">Use theme default</button>
+          </span>
+        </label>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Theme &amp; background</h2><span id="themeCount" class="muted"></span></div>
+        <div id="themeGrid" class="theme-grid"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Featured showcase</h2><span class="muted">up to 3</span></div>
+        <div id="featuredRow" class="featured-row"></div>
+        <p class="hint">Click an inventory item below to feature it; click a featured slot to remove it.</p>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Inventory</h2><span id="invCount" class="muted"></span></div>
+        <div class="inv-controls">
+          <input id="invSearch" class="search" placeholder="Search items…" />
+          <div id="rarityFilter" class="rarity-filter"></div>
+        </div>
+        <div id="invGrid" class="inv-grid"></div>
+        <div id="invPager" class="pager"></div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div id="toast" class="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

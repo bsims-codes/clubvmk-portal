@@ -1,0 +1,563 @@
+{
+ "classic": {
+  "name": "Classic",
+  "bg": [
+   18,
+   22,
+   42
+  ],
+  "panel": [
+   30,
+   36,
+   66
+  ],
+  "accent": [
+   61,
+   139,
+   253
+  ],
+  "fx": null,
+  "unlock": {
+   "type": "default"
+  }
+ },
+ "midnight": {
+  "name": "Midnight",
+  "bg": [
+   10,
+   10,
+   22
+  ],
+  "panel": [
+   26,
+   24,
+   44
+  ],
+  "accent": [
+   160,
+   92,
+   240
+  ],
+  "fx": null,
+  "unlock": {
+   "type": "total",
+   "value": 50
+  }
+ },
+ "goldrush": {
+  "name": "Gold Rush",
+  "bg": [
+   38,
+   30,
+   10
+  ],
+  "panel": [
+   60,
+   48,
+   16
+  ],
+  "accent": [
+   240,
+   190,
+   60
+  ],
+  "fx": null,
+  "unlock": {
+   "type": "rarity",
+   "tier": "legendary",
+   "value": 5
+  }
+ },
+ "emerald": {
+  "name": "Emerald",
+  "bg": [
+   8,
+   30,
+   22
+  ],
+  "panel": [
+   16,
+   50,
+   38
+  ],
+  "accent": [
+   54,
+   200,
+   140
+  ],
+  "fx": null,
+  "unlock": {
+   "type": "total",
+   "value": 200
+  }
+ },
+ "frostbite": {
+  "name": "Frostbite",
+  "bg": [
+   12,
+   26,
+   40
+  ],
+  "panel": [
+   20,
+   42,
+   62
+  ],
+  "accent": [
+   120,
+   200,
+   240
+  ],
+  "fx": null,
+  "unlock": {
+   "type": "buy",
+   "cost": 3
+  }
+ },
+ "rosegold": {
+  "name": "Rose Gold",
+  "bg": [
+   40,
+   18,
+   26
+  ],
+  "panel": [
+   62,
+   30,
+   42
+  ],
+  "accent": [
+   240,
+   130,
+   160
+  ],
+  "fx": null,
+  "unlock": {
+   "type": "buy",
+   "cost": 5
+  }
+ },
+ "neon": {
+  "name": "Neon Glow",
+  "bg": [
+   6,
+   6,
+   16
+  ],
+  "panel": [
+   16,
+   14,
+   34
+  ],
+  "accent": [
+   64,
+   240,
+   255
+  ],
+  "fx": "neon",
+  "unlock": {
+   "type": "club",
+   "cost": 10
+  }
+ },
+ "sunset": {
+  "name": "Sunset Gradient",
+  "bg": [
+   32,
+   14,
+   46
+  ],
+  "panel": [
+   52,
+   24,
+   62
+  ],
+  "accent": [
+   255,
+   150,
+   92
+  ],
+  "fx": "gradient",
+  "unlock": {
+   "type": "club",
+   "cost": 10
+  },
+  "grad": [
+   [
+    58,
+    16,
+    76
+   ],
+   [
+    214,
+    84,
+    46
+   ]
+  ]
+ },
+ "ocean": {
+  "name": "Deep Ocean",
+  "bg": [
+   5,
+   18,
+   38
+  ],
+  "panel": [
+   10,
+   34,
+   60
+  ],
+  "accent": [
+   86,
+   202,
+   255
+  ],
+  "fx": "gradient",
+  "unlock": {
+   "type": "club",
+   "cost": 10
+  },
+  "grad": [
+   [
+    3,
+    12,
+    32
+   ],
+   [
+    0,
+    96,
+    118
+   ]
+  ]
+ },
+ "aurora": {
+  "name": "Aurora (animated)",
+  "bg": [
+   8,
+   12,
+   28
+  ],
+  "panel": [
+   16,
+   22,
+   44
+  ],
+  "accent": [
+   128,
+   255,
+   202
+  ],
+  "fx": "animated",
+  "unlock": {
+   "type": "club",
+   "cost": 10
+  }
+ },
+ "cottoncandy": {
+  "name": "Cotton Candy",
+  "bg": [
+   40,
+   24,
+   54
+  ],
+  "panel": [
+   58,
+   36,
+   74
+  ],
+  "accent": [
+   255,
+   160,
+   210
+  ],
+  "fx": "gradient",
+  "unlock": {
+   "type": "club",
+   "cost": 5
+  },
+  "grad": [
+   [
+    90,
+    40,
+    110
+   ],
+   [
+    60,
+    110,
+    190
+   ]
+  ]
+ },
+ "toxic": {
+  "name": "Toxic Glow",
+  "bg": [
+   8,
+   14,
+   8
+  ],
+  "panel": [
+   18,
+   30,
+   16
+  ],
+  "accent": [
+   120,
+   255,
+   60
+  ],
+  "fx": "neon",
+  "unlock": {
+   "type": "club",
+   "cost": 6
+  }
+ },
+ "starlight": {
+  "name": "Starlight",
+  "bg": [
+   8,
+   10,
+   30
+  ],
+  "panel": [
+   18,
+   22,
+   48
+  ],
+  "accent": [
+   200,
+   210,
+   255
+  ],
+  "fx": "stars",
+  "unlock": {
+   "type": "club",
+   "cost": 12
+  },
+  "grad": [
+   [
+    6,
+    8,
+    26
+   ],
+   [
+    20,
+    18,
+    52
+   ]
+  ]
+ },
+ "holofoil": {
+  "name": "Holofoil (animated)",
+  "bg": [
+   20,
+   20,
+   30
+  ],
+  "panel": [
+   26,
+   26,
+   42
+  ],
+  "accent": [
+   235,
+   235,
+   255
+  ],
+  "fx": "holo",
+  "unlock": {
+   "type": "club",
+   "cost": 20
+  }
+ },
+ "galaxy": {
+  "name": "Galaxy (animated)",
+  "bg": [
+   6,
+   4,
+   20
+  ],
+  "panel": [
+   18,
+   14,
+   40
+  ],
+  "accent": [
+   180,
+   140,
+   255
+  ],
+  "fx": "galaxy",
+  "unlock": {
+   "type": "club",
+   "cost": 50
+  }
+ },
+ "cards": {
+  "name": "Trading Cards",
+  "bg": [
+   16,
+   12,
+   20
+  ],
+  "panel": [
+   30,
+   22,
+   38
+  ],
+  "accent": [
+   240,
+   200,
+   80
+  ],
+  "fx": "image",
+  "unlock": {
+   "type": "club",
+   "cost": 5
+  },
+  "image": "assets/bg/cards.jpg"
+ },
+ "fireworks": {
+  "name": "Castle Fireworks",
+  "bg": [
+   14,
+   10,
+   40
+  ],
+  "panel": [
+   28,
+   22,
+   62
+  ],
+  "accent": [
+   255,
+   130,
+   220
+  ],
+  "fx": "image",
+  "unlock": {
+   "type": "club",
+   "cost": 5
+  },
+  "image": "assets/bg/fireworks.jpg"
+ },
+ "fish": {
+  "name": "Something Fishy",
+  "bg": [
+   4,
+   28,
+   44
+  ],
+  "panel": [
+   8,
+   44,
+   62
+  ],
+  "accent": [
+   120,
+   225,
+   235
+  ],
+  "fx": "image",
+  "unlock": {
+   "type": "club",
+   "cost": 5
+  },
+  "image": "assets/bg/fishbg.png"
+ },
+ "items": {
+  "name": "Item Vault",
+  "bg": [
+   6,
+   26,
+   60
+  ],
+  "panel": [
+   12,
+   42,
+   86
+  ],
+  "accent": [
+   130,
+   195,
+   255
+  ],
+  "fx": "image",
+  "unlock": {
+   "type": "club",
+   "cost": 5
+  },
+  "image": "assets/bg/items.jpg"
+ },
+ "kh": {
+  "name": "Kingdom Hearts",
+  "bg": [
+   10,
+   12,
+   30
+  ],
+  "panel": [
+   20,
+   24,
+   52
+  ],
+  "accent": [
+   245,
+   210,
+   90
+  ],
+  "fx": "image",
+  "unlock": {
+   "type": "club",
+   "cost": 10
+  },
+  "image": "assets/bg/KH.jpg"
+ },
+ "onepiece": {
+  "name": "One Piece",
+  "bg": [
+   30,
+   14,
+   10
+  ],
+  "panel": [
+   52,
+   26,
+   18
+  ],
+  "accent": [
+   240,
+   80,
+   70
+  ],
+  "fx": "image",
+  "unlock": {
+   "type": "club",
+   "cost": 10
+  },
+  "image": "assets/bg/onepiece.jpg"
+ },
+ "antisora": {
+  "name": "Anti-Sora",
+  "bg": [
+   10,
+   6,
+   20
+  ],
+  "panel": [
+   22,
+   14,
+   36
+  ],
+  "accent": [
+   170,
+   90,
+   240
+  ],
+  "fx": "image",
+  "unlock": {
+   "type": "club",
+   "cost": 10
+  },
+  "image": "assets/bg/antisora.jpg"
+ }
+}
