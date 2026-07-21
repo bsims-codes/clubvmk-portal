@@ -30,6 +30,9 @@ async function boot() {
   await applyRarityOverrides();
 
   $("#signInBtn").onclick = signIn;
+  document.addEventListener("click", (e) => { if (!e.target.closest("#ctxMenu")) hideCtxMenu(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") hideCtxMenu(); });
+  window.addEventListener("scroll", hideCtxMenu, true);
   sb.auth.onAuthStateChange((_e, session) => render(session));
   const { data } = await sb.auth.getSession();
   render(data.session);
@@ -297,6 +300,7 @@ function renderInv() {
       e.dataTransfer.effectAllowed = "copy";
     };
     el.onclick = () => toggleFeature(el.dataset.id);
+    el.oncontextmenu = (e) => { e.preventDefault(); showItemMenu(e.clientX, e.clientY, el.dataset.id); };
   });
   $("#invPager").innerHTML = pages > 1
     ? `<button id="pp" ${S.invPage === 0 ? "disabled" : ""}>◀</button>
@@ -307,6 +311,35 @@ function renderInv() {
     $("#pn").onclick = () => { S.invPage++; renderInv(); };
   }
 }
+
+/* ---------- inventory right-click menu ---------- */
+function showItemMenu(x, y, id) {
+  const it = S.catalog[id]; if (!it) return;
+  const m = $("#ctxMenu");
+  const rows = [`<div class="ctx-head">Feature: ${esc(it.n)}</div>`];
+  const acts = [];
+  for (let i = 0; i < 3; i++) {
+    const occId = S.draft.featured[i];
+    const occ = occId ? (occId === id ? "★ this item" : (S.catalog[occId]?.n || "item")) : "empty";
+    rows.push(`<button class="ctx-item" data-i="${acts.length}">Slot ${i + 1} <span class="ctx-sub">${esc(occ)}</span></button>`);
+    acts.push(() => dropInvOnSlot(i, id));
+  }
+  if (S.draft.featured.includes(id)) {
+    rows.push(`<button class="ctx-item danger" data-i="${acts.length}">Remove from showcase</button>`);
+    acts.push(() => {
+      const idx = S.draft.featured.indexOf(id);
+      if (idx >= 0) { S.draft.featured.splice(idx, 1); touch(); renderFeatured(); renderInv(); }
+    });
+  }
+  m.innerHTML = rows.join("");
+  m.querySelectorAll(".ctx-item").forEach((b) => b.onclick = () => { acts[+b.dataset.i](); hideCtxMenu(); });
+  m.classList.remove("hidden");
+  // position, keeping it on screen
+  const r = m.getBoundingClientRect();
+  m.style.left = Math.min(x, window.innerWidth - r.width - 8) + "px";
+  m.style.top = Math.min(y, window.innerHeight - r.height - 8) + "px";
+}
+function hideCtxMenu() { $("#ctxMenu").classList.add("hidden"); }
 
 function toggleFeature(id) {
   const i = S.draft.featured.indexOf(id);
