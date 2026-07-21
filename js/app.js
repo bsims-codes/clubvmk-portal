@@ -27,6 +27,10 @@ async function boot() {
   ]);
   for (const it of cat) S.catalog[it.id] = it;
   S.themes = thm;
+  try {
+    S.guildNames = await fetch(CFG.SUPABASE_URL + "/storage/v1/object/public/previews/guilds.json")
+      .then((r) => (r.ok ? r.json() : {}));
+  } catch { S.guildNames = {}; }
 
   $("#signInBtn").onclick = signIn;
   sb.auth.onAuthStateChange((_e, session) => render(session));
@@ -51,7 +55,7 @@ async function render(session) {
   const ident = (S.user.identities || []).find((i) => i.provider === "discord") || {};
   S.discordId = m.provider_id || m.sub || ident.id || ident.identity_data?.provider_id || ident.identity_data?.sub;
   S.name = m.global_name || m.full_name || m.name || m.custom_claims?.global_name || "Collector";
-  S.avatar = m.avatar_url || m.picture || null;
+  S.avatar = m.avatar_url || m.picture || ident.identity_data?.avatar_url || ident.identity_data?.picture || null;
 
   $("#authSlot").innerHTML =
     `<div class="who">${S.avatar ? `<img src="${S.avatar}" alt="">` : ""}<b>${esc(S.name)}</b>
@@ -109,8 +113,9 @@ function renderGuildBar() {
   const bar = $("#guildBar");
   if (S.guilds.length < 2) return bar.classList.add("hidden");
   bar.classList.remove("hidden");
+  const label = (g) => (S.guildNames && S.guildNames[g]) || "Server " + g.slice(-4);
   bar.innerHTML = `<span>Server:</span>` + S.guilds.map((g) =>
-    `<button data-g="${g}" class="${g === S.guild ? "on" : ""}">${g.slice(-4)}</button>`).join("");
+    `<button data-g="${g}" class="${g === S.guild ? "on" : ""}">${esc(label(g))}</button>`).join("");
   bar.querySelectorAll("button").forEach((b) => b.onclick = () => { S.guild = b.dataset.g; loadData(); });
 }
 
