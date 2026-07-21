@@ -27,11 +27,27 @@ async function boot() {
   ]);
   for (const it of cat) S.catalog[it.id] = it;
   S.themes = thm;
+  await applyRarityOverrides();
 
   $("#signInBtn").onclick = signIn;
   sb.auth.onAuthStateChange((_e, session) => render(session));
   const { data } = await sb.auth.getSession();
   render(data.session);
+}
+
+// Apply the same rarity overrides the bot uses, from the curator's `overrides`
+// table, so the portal shows identical rarities/colours/counts to Discord.
+async function applyRarityOverrides() {
+  try {
+    let from = 0; const page = 1000;
+    for (;;) {
+      const { data, error } = await sb.from("overrides").select("item_id,tier").range(from, from + page - 1);
+      if (error) throw error;
+      for (const o of data || []) if (S.catalog[o.item_id]) S.catalog[o.item_id].r = o.tier;
+      if (!data || data.length < page) break;
+      from += page;
+    }
+  } catch (e) { console.warn("overrides load failed:", e.message); }
 }
 
 async function signIn() {
