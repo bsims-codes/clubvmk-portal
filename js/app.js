@@ -102,8 +102,24 @@ async function loadData() {
     bio: prof?.bio || "",
   };
   S.saved = JSON.stringify(S.draft);
+  // unlock state (mirrored from the bot): purchased/granted themes + inventory stats
+  S.themesOwned = Array.isArray(prof?.themes_owned) ? prof.themes_owned : [];
+  S.totalItems = S.inv.reduce((n, r) => n + r.count, 0);
+  S.byTier = {};
+  for (const r of S.inv) { const it = S.catalog[r.item_id]; if (it) S.byTier[it.r] = (S.byTier[it.r] || 0) + r.count; }
   wireEditor();
   renderAll();
+  doRender(true);   // show the real, true-size card straight away
+}
+
+// Mirror of the bot's theme_available(): is this theme unlocked for this player?
+function themeUnlocked(id, t) {
+  const u = t.unlock || {};
+  if (S.themesOwned.includes(id)) return true;
+  if (u.type === "default") return true;
+  if (u.type === "total") return S.totalItems >= u.value;
+  if (u.type === "rarity") return (S.byTier[u.tier] || 0) >= u.value;
+  return false;   // buy/club themes require purchase (themes_owned) in Discord
 }
 
 function notReady(msg) {
@@ -131,7 +147,7 @@ function wireEditor() {
   col.oninput = () => { S.draft.accent_color = col.value; touch(); renderPreview(); };
   $("#colorReset").onclick = () => { S.draft.accent_color = null; touch(); renderAll(); };
   $("#saveBtn").onclick = save;
-  $("#renderBtn").onclick = requestRender;
+  $("#renderBtn").onclick = () => doRender(false);
   $("#invSearch").oninput = (e) => { S.invSearch = e.target.value.toLowerCase(); S.invPage = 0; renderInv(); };
 }
 
@@ -141,23 +157,33 @@ function renderAll() { renderThemes(); renderFeatured(); renderRarityFilter(); r
 function renderThemes() {
   const g = $("#themeGrid"); g.innerHTML = "";
   const entries = Object.entries(S.themes);
-  $("#themeCount").textContent = `${entries.length} themes`;
+  const nOwned = entries.filter(([id, t]) => themeUnlocked(id, t)).length;
+  $("#themeCount").textContent = `${nOwned} of ${entries.length} unlocked`;
   for (const [id, t] of entries) {
+    const unlocked = themeUnlocked(id, t);
     const cell = document.createElement("div");
-    cell.className = "theme-cell" + (id === S.draft.theme ? " on" : "");
+    cell.className = "theme-cell" + (id === S.draft.theme ? " on" : "") + (unlocked ? "" : " locked");
     const bg = t.image ? `background-image:url('${t.image}')`
       : t.grad ? `background:linear-gradient(160deg,${rgb(t.grad[0])},${rgb(t.grad[1])})`
       : `background:${rgb(t.bg)}`;
     const u = t.unlock || {};
     let lock = "";
-    if (u.type === "club") lock = `🪙 ${u.cost}`;
-    else if (u.type === "buy") lock = `❄️ ${u.cost}`;
-    else if (u.type === "total") lock = `${u.value} items`;
-    else if (u.type === "rarity") lock = `${u.value} ${u.tier}`;
+    if (!unlocked) {
+      if (u.type === "club") lock = `🔒 🪙${u.cost}`;
+      else if (u.type === "buy") lock = `🔒 ❄️${u.cost}`;
+      else if (u.type === "total") lock = `🔒 ${u.value} items`;
+      else if (u.type === "rarity") lock = `🔒 ${u.value} ${u.tier}`;
+      else lock = "🔒";
+    }
     cell.innerHTML = `<div class="tc-bg" style="${bg}"></div>` +
       (lock ? `<div class="tc-lock">${lock}</div>` : "") +
       `<div class="tc-name">${esc(t.name)}</div>`;
-    cell.onclick = () => { S.draft.theme = id; if (!S.draft.accent_color) $("#colorInput").value = rgbHex(t.accent); touch(); renderThemes(); renderPreview(); };
+    cell.onclick = () => {
+      if (!unlocked) return toast("🔒 Unlock this theme in Discord first (/theme).");
+      S.draft.theme = id;
+      if (!S.draft.accent_color) $("#colorInput").value = rgbHex(t.accent);
+      touch(); renderThemes(); renderPreview();
+    };
     g.appendChild(cell);
   }
 }
@@ -265,7 +291,12 @@ function renderPreview() {
 }
 
 /* ---------- save ---------- */
-function touch() { syncSaveState(); }
+let renderTimer;
+function touch() { syncSaveState(); scheduleRealRender(); }
+function scheduleRealRender() {
+  clearTimeout(renderTimer);
+  renderTimer = setTimeout(() => doRender(true), 1300);
+}
 function syncSaveState() {
   const dirty = JSON.stringify(S.draft) !== S.saved;
   const el = $("#saveState");
@@ -287,22 +318,24 @@ async function save() {
   toast("Saved! Your /profile will update shortly. ✨");
 }
 
-/* ---------- request the real render from the bot ---------- */
-async function requestRender() {
-  if (!S.guild) return toast("Nothing to render yet.", true);
-  $("#renderBtn").disabled = true; $("#renderBtn").textContent = "Rendering…";
+/* ---------- render the REAL card via the bot (auto on edits + manual button) ---------- */
+async function doRender(auto) {
+  if (!S.guild) { if (!auto) toast("Nothing to render yet.", true); return; }
+  const cp = $("#cardPreview");
+  cp.classList.add("rendering");
+  if (!auto) { $("#renderBtn").disabled = true; $("#renderBtn").textContent = "Rendering…"; }
   const preview = { theme: S.draft.theme, accent_color: S.draft.accent_color, featured: S.draft.featured, bio: S.draft.bio };
   const { data, error } = await sb.from("render_requests")
     .insert({ discord_id: S.discordId, guild_id: S.guild, preview }).select().single();
-  if (error) { resetRenderBtn(); return toast("Render request failed: " + error.message, true); }
+  if (error) { finishRender(); if (!auto) toast("Render request failed: " + error.message, true); return; }
 
   let done = false;
   const finish = (row) => {
     if (done) return; done = true;
-    resetRenderBtn();
+    finishRender();
     if (row.status === "done" && row.png_url)
-      $("#cardPreview").innerHTML = `<img src="${row.png_url}?t=${Date.now()}" alt="Your profile card">`;
-    else toast(row.error || "The bot couldn't render that.", true);
+      cp.innerHTML = `<img src="${row.png_url}?t=${Date.now()}" alt="Your profile card">`;
+    else if (!auto) toast(row.error || "The bot couldn't render that.", true);
   };
   const chan = sb.channel("render-" + data.id)
     .on("postgres_changes",
@@ -312,12 +345,15 @@ async function requestRender() {
   setTimeout(async () => {
     if (done) return;
     const { data: row } = await sb.from("render_requests").select("*").eq("id", data.id).single();
-    if (row && row.status !== "pending") { finish(row); }
-    else { resetRenderBtn(); toast("Still waiting on the bot — is the render worker running?", true); }
+    if (row && row.status !== "pending") finish(row);
+    else { finishRender(); if (!auto) toast("Still waiting on the bot — is the render worker running?", true); }
     sb.removeChannel(chan);
   }, 12000);
 }
-function resetRenderBtn() { const b = $("#renderBtn"); b.disabled = false; b.textContent = "⟳ Render exact card"; }
+function finishRender() {
+  $("#cardPreview").classList.remove("rendering");
+  const b = $("#renderBtn"); b.disabled = false; b.textContent = "⟳ Render exact card";
+}
 
 /* ---------- helpers ---------- */
 function imgUrl(f) { return CFG.ITEM_IMG_BASE + f; }

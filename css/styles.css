@@ -121,6 +121,11 @@ body{
   background:#0c1024;border:1px solid var(--line);display:flex;align-items:center;justify-content:center}
 .card-preview .empty{color:var(--faint);font-size:14px}
 .card-preview img{width:100%;height:100%;object-fit:contain;display:block}
+.card-preview.rendering{position:relative}
+.card-preview.rendering::after{content:"⟳ rendering exact card…";position:absolute;top:10px;right:12px;
+  font-size:11.5px;color:var(--gold-soft);background:rgba(6,8,20,.72);padding:4px 10px;border-radius:99px;
+  animation:pulse 1.1s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.55}50%{opacity:1}}
 .preview-actions{display:flex;gap:10px;margin-top:14px}
 .preview-actions .btn{flex:1}
 .save-state{font-size:12.5px;color:var(--faint)}
