@@ -584,6 +584,78 @@
   },
   "image": "assets/bg/flo-v8.jpg"
  },
+ "stitchangel": {
+  "name": "Stitch & Angel",
+  "bg": [
+   30,
+   26,
+   40
+  ],
+  "panel": [
+   44,
+   38,
+   60
+  ],
+  "accent": [
+   96,
+   190,
+   210
+  ],
+  "fx": "image",
+  "unlock": {
+   "type": "club",
+   "cost": 10
+  },
+  "image": "assets/bg/stitchangel.jpg"
+ },
+ "stitch": {
+  "name": "Stitch",
+  "bg": [
+   24,
+   18,
+   42
+  ],
+  "panel": [
+   38,
+   28,
+   60
+  ],
+  "accent": [
+   110,
+   180,
+   240
+  ],
+  "fx": "image",
+  "unlock": {
+   "type": "club",
+   "cost": 10
+  },
+  "image": "assets/bg/stitch.webp"
+ },
+ "animalkingdom": {
+  "name": "Animal Kingdom",
+  "bg": [
+   16,
+   26,
+   24
+  ],
+  "panel": [
+   26,
+   42,
+   36
+  ],
+  "accent": [
+   86,
+   185,
+   110
+  ],
+  "fx": "image",
+  "unlock": {
+   "type": "club",
+   "cost": 10
+  },
+  "image": "assets/bg/animal-kingdom.jpg"
+ },
  "synthwave": {
   "name": "Synthwave (animated)",
   "bg": [
