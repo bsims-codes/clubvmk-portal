@@ -15,7 +15,7 @@ const S = {
   // editable profile draft:
   draft: { theme: CFG.DEFAULT_THEME, accent_color: null, featured: [], bio: "" },
   saved: null,           // JSON snapshot of last-saved draft
-  invPage: 0, invSearch: "", invRarity: "all",
+  invPage: 0, invSearch: "", invRarity: "all", invCat: "all", invSort: "rarity_desc",
 };
 const PER = 24;
 
@@ -168,6 +168,8 @@ function wireEditor() {
   $("#saveBtn").onclick = save;
   $("#renderBtn").onclick = () => doRender(false);
   $("#invSearch").oninput = (e) => { S.invSearch = e.target.value.toLowerCase(); S.invPage = 0; renderInv(); };
+  const sort = $("#invSort"); sort.value = S.invSort;
+  sort.onchange = (e) => { S.invSort = e.target.value; S.invPage = 0; renderInv(); };
 }
 
 /* ---------- render everything ---------- */
@@ -269,16 +271,35 @@ function renderRarityFilter() {
 }
 
 function filteredInv() {
-  return S.inv
+  const list = S.inv
     .map((r) => ({ ...r, it: S.catalog[r.item_id] }))
     .filter((r) => r.it)
     .filter((r) => S.invRarity === "all" || r.it.r === S.invRarity)
-    .filter((r) => !S.invSearch || r.it.n.toLowerCase().includes(S.invSearch))
-    .sort((a, b) => RARITY.indexOf(a.it.r) - RARITY.indexOf(b.it.r) || a.it.n.localeCompare(b.it.n));
+    .filter((r) => S.invCat === "all" || r.it.c === S.invCat)
+    .filter((r) => !S.invSearch || r.it.n.toLowerCase().includes(S.invSearch));
+  const byName = (a, b) => a.it.n.localeCompare(b.it.n);
+  const rIdx = (x) => RARITY.indexOf(x.it.r);
+  const sorts = {
+    rarity_desc: (a, b) => rIdx(a) - rIdx(b) || byName(a, b),
+    rarity_asc: (a, b) => rIdx(b) - rIdx(a) || byName(a, b),
+    az: byName,
+    za: (a, b) => byName(b, a),
+  };
+  return list.sort(sorts[S.invSort] || sorts.rarity_desc);
+}
+
+function renderTypeFilter() {
+  const f = $("#typeFilter");
+  const cats = [...new Set(S.inv.map((r) => S.catalog[r.item_id]?.c).filter(Boolean))].sort();
+  const label = { pin: "Pins", clothing: "Clothing" };
+  f.innerHTML = ["all", ...cats].map((c) =>
+    `<button data-c="${c}" class="${c === S.invCat ? "on" : ""}">${c === "all" ? "All types" : (label[c] || cap(c))}</button>`).join("");
+  f.querySelectorAll("button").forEach((b) => b.onclick = () => { S.invCat = b.dataset.c; S.invPage = 0; renderInv(); });
 }
 
 function renderInv() {
   renderRarityFilter();
+  renderTypeFilter();
   const all = filteredInv();
   const total = S.inv.reduce((n, r) => n + r.count, 0);
   $("#invCount").textContent = `${total} items · ${S.inv.length} unique`;

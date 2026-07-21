@@ -95,6 +95,15 @@
         <div class="panel-head"><h2>Inventory</h2><span id="invCount" class="muted"></span></div>
         <div class="inv-controls">
           <input id="invSearch" class="search" placeholder="Search items…" />
+          <select id="invSort" class="mini-select" title="Sort">
+            <option value="rarity_desc">Rarity: high → low</option>
+            <option value="rarity_asc">Rarity: low → high</option>
+            <option value="az">Name: A → Z</option>
+            <option value="za">Name: Z → A</option>
+          </select>
+        </div>
+        <div class="inv-controls">
+          <div id="typeFilter" class="rarity-filter"></div>
           <div id="rarityFilter" class="rarity-filter"></div>
         </div>
         <div id="invGrid" class="inv-grid"></div>

@@ -208,6 +208,10 @@ body{
 .rarity-filter button[data-r=uncommon].on{background:var(--unc)}
 .rarity-filter button[data-r=common].on{background:var(--com)}
 .rarity-filter button[data-r=all].on{background:var(--gold)}
+.rarity-filter button[data-c].on{background:var(--gold);color:#0c1024}
+.mini-select{background:var(--bg);border:1px solid var(--line);border-radius:10px;color:var(--ink);
+  padding:10px 12px;font-family:inherit;font-size:13.5px;cursor:pointer}
+.mini-select:focus{outline:none;border-color:var(--gold)}
 
 .inv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:12px;min-height:80px}
 .inv-item{position:relative;cursor:pointer;background:var(--bg);border:1px solid var(--line);border-radius:12px;
