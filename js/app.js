@@ -256,46 +256,18 @@ function toggleFeature(id) {
   touch(); renderFeatured(); renderInv(); renderPreview();
 }
 
-/* ---------- live CSS preview ---------- */
-function renderPreview() {
-  const t = S.themes[S.draft.theme] || S.themes[CFG.DEFAULT_THEME];
-  const accent = S.draft.accent_color || rgbHex(t.accent);
-  const total = S.inv.reduce((n, r) => n + r.count, 0);
-  const byTier = {};
-  for (const r of S.inv) { const it = S.catalog[r.item_id]; if (it) byTier[it.r] = (byTier[it.r] || 0) + r.count; }
-  const bg = t.image ? `background-image:url('${t.image}')`
-    : t.grad ? `background:linear-gradient(160deg,${rgb(t.grad[0])},${rgb(t.grad[1])})`
-    : `background:${rgb(t.bg)}`;
-  const scrim = t.image ? "background:rgba(6,8,20,.5)" : "background:rgba(6,8,20,.15)";
-  const slots = [0, 1, 2].map((i) => {
-    const it = S.draft.featured[i] && S.catalog[S.draft.featured[i]];
-    return it ? `<div class="slot"><img src="${imgUrl(it.img)}"><span>${esc(it.n)}</span></div>`
-              : `<div class="slot"></div>`;
-  }).join("");
-  const tiles = [["TOTAL", total], ["UNIQUE", S.inv.length],
-    ["LEGENDARY", byTier.legendary || 0], ["EPIC", byTier.epic || 0]]
-    .map(([k, v]) => `<div><small>${k}</small><b>${v}</b></div>`).join("");
-  $("#cardPreview").innerHTML =
-    `<div class="pv" style="--pv-accent:${accent}">
-      <div class="pv-bg" style="${bg}"></div><div class="pv-scrim" style="${scrim}"></div>
-      <div class="pv-body">
-        <div class="pv-head">
-          <div class="pv-av" style="border-color:${accent};${S.avatar ? `background-image:url('${S.avatar}')` : ""}"></div>
-          <div><div class="pv-name">${esc(S.name)}</div><div class="pv-bio">${esc(S.draft.bio || "")}</div></div>
-        </div>
-        <div class="pv-tiles">${tiles}</div>
-        <div class="pv-show">${slots}</div>
-        <div class="pv-theme">Theme: ${esc(t.name)}</div>
-      </div>
-    </div>`;
-}
+/* ---------- preview ----------
+   The preview is ALWAYS the real bot-rendered card (see doRender), so it matches
+   /profile exactly. renderPreview() is kept as a no-op so edit handlers can call
+   it harmlessly; the actual refresh is the debounced real render from touch(). */
+function renderPreview() { /* intentionally empty — the exact card is the preview */ }
 
 /* ---------- save ---------- */
 let renderTimer;
 function touch() { syncSaveState(); scheduleRealRender(); }
 function scheduleRealRender() {
   clearTimeout(renderTimer);
-  renderTimer = setTimeout(() => doRender(true), 1300);
+  renderTimer = setTimeout(() => doRender(true), 800);
 }
 function syncSaveState() {
   const dirty = JSON.stringify(S.draft) !== S.saved;
@@ -322,6 +294,7 @@ async function save() {
 async function doRender(auto) {
   if (!S.guild) { if (!auto) toast("Nothing to render yet.", true); return; }
   const cp = $("#cardPreview");
+  if (!cp.querySelector("img")) cp.innerHTML = `<div class="empty">Rendering your card…</div>`;
   cp.classList.add("rendering");
   if (!auto) { $("#renderBtn").disabled = true; $("#renderBtn").textContent = "Rendering…"; }
   const preview = { theme: S.draft.theme, accent_color: S.draft.accent_color, featured: S.draft.featured, bio: S.draft.bio };
