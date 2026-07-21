@@ -559,5 +559,40 @@
    "cost": 10
   },
   "image": "assets/bg/antisora.jpg"
+ },
+ "synthwave": {
+  "name": "Synthwave (animated)",
+  "bg": [
+   14,
+   6,
+   40
+  ],
+  "panel": [
+   30,
+   14,
+   58
+  ],
+  "accent": [
+   80,
+   240,
+   255
+  ],
+  "fx": "synthwave",
+  "unlock": {
+   "type": "club",
+   "cost": 100
+  },
+  "grad": [
+   [
+    18,
+    6,
+    46
+   ],
+   [
+    150,
+    34,
+    120
+   ]
+  ]
  }
 }
