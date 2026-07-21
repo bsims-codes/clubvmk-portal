@@ -195,14 +195,50 @@ function renderFeatured() {
     const it = id && S.catalog[id];
     const slot = document.createElement("div");
     slot.className = "fslot" + (it ? " filled" : "");
+    slot.dataset.slot = i;
     if (it) {
-      slot.innerHTML = `<span class="x">✕</span><img src="${imgUrl(it.img)}" alt=""><span>${esc(it.n)}</span>`;
-      slot.onclick = () => { S.draft.featured.splice(i, 1); touch(); renderFeatured(); renderInv(); renderPreview(); };
+      slot.setAttribute("draggable", "true");
+      slot.innerHTML = `<span class="x" title="Remove">✕</span><img src="${imgUrl(it.img)}" alt=""><span>${esc(it.n)}</span>`;
+      slot.querySelector(".x").onclick = (e) => {
+        e.stopPropagation(); S.draft.featured.splice(i, 1); touch(); renderFeatured(); renderInv();
+      };
+      slot.ondragstart = (e) => {
+        e.dataTransfer.setData("text/plain", "feat:" + i);
+        e.dataTransfer.effectAllowed = "move"; slot.classList.add("dragging");
+      };
+      slot.ondragend = () => slot.classList.remove("dragging");
     } else {
       slot.innerHTML = `<span class="plus">+</span>`;
     }
+    slot.ondragover = (e) => { e.preventDefault(); slot.classList.add("drop-hover"); };
+    slot.ondragleave = () => slot.classList.remove("drop-hover");
+    slot.ondrop = (e) => {
+      e.preventDefault(); slot.classList.remove("drop-hover");
+      const d = e.dataTransfer.getData("text/plain") || "";
+      if (d.startsWith("inv:")) dropInvOnSlot(i, d.slice(4));
+      else if (d.startsWith("feat:")) moveFeatured(parseInt(d.slice(5), 10), i);
+    };
     row.appendChild(slot);
   }
+}
+
+function dropInvOnSlot(i, itemId) {
+  if (!S.catalog[itemId]) return;
+  let f = S.draft.featured.slice();
+  if (i < f.length) f[i] = itemId; else f.push(itemId);   // replace that slot, or fill next
+  const seen = new Set();                                  // dedup (item can't be featured twice)
+  f = f.filter((x) => (seen.has(x) ? false : (seen.add(x), true)));
+  S.draft.featured = f.slice(0, 3);
+  touch(); renderFeatured(); renderInv();
+}
+
+function moveFeatured(from, to) {
+  const f = S.draft.featured.slice();
+  if (from < 0 || from >= f.length) return;
+  const [x] = f.splice(from, 1);
+  f.splice(Math.max(0, Math.min(to, f.length)), 0, x);
+  S.draft.featured = f.slice(0, 3);
+  touch(); renderFeatured(); renderInv();
 }
 
 function renderRarityFilter() {
@@ -238,7 +274,14 @@ function renderInv() {
       ${r.count > 1 ? `<span class="ct">×${r.count}</span>` : ""}
       <img loading="lazy" src="${imgUrl(r.it.img)}" alt=""><div class="nm">${esc(r.it.n)}</div></div>`;
   }).join("");
-  grid.querySelectorAll(".inv-item").forEach((el) => el.onclick = () => toggleFeature(el.dataset.id));
+  grid.querySelectorAll(".inv-item").forEach((el) => {
+    el.setAttribute("draggable", "true");
+    el.ondragstart = (e) => {
+      e.dataTransfer.setData("text/plain", "inv:" + el.dataset.id);
+      e.dataTransfer.effectAllowed = "copy";
+    };
+    el.onclick = () => toggleFeature(el.dataset.id);
+  });
   $("#invPager").innerHTML = pages > 1
     ? `<button id="pp" ${S.invPage === 0 ? "disabled" : ""}>◀</button>
        <span>${S.invPage + 1} / ${pages}</span>

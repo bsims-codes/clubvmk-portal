@@ -188,6 +188,12 @@ body{
 .featured-row .fslot .plus{color:var(--faint);font-size:26px}
 .featured-row .fslot span{position:absolute;bottom:3px;font-size:10px;color:#dfe4f6;max-width:92%;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.featured-row .fslot.filled{cursor:grab}
+.featured-row .fslot.dragging{opacity:.35}
+.featured-row .fslot.drop-hover{border-style:solid;border-color:var(--gold);
+  box-shadow:0 0 0 3px rgba(240,178,60,.3);transform:translateY(-2px)}
+.inv-item[draggable]{cursor:grab}
+.inv-item:active{cursor:grabbing}
 
 /* inventory */
 .inv-controls{display:flex;gap:12px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
