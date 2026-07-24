@@ -4,6 +4,7 @@
 const CFG = window.CLUBVMK;
 const sb = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY);
 const RARITY = ["legendary", "epic", "rare", "uncommon", "common"];
+const FEATURED_MAX = 4;   // how many items a showcase can hold (keep in sync with the bot)
 const $ = (s) => document.querySelector(s);
 
 const S = {
@@ -117,7 +118,7 @@ async function loadData() {
   S.draft = {
     theme: prof?.theme || CFG.DEFAULT_THEME,
     accent_color: prof?.accent_color || null,
-    featured: Array.isArray(prof?.featured) ? prof.featured.slice(0, 3) : [],
+    featured: Array.isArray(prof?.featured) ? prof.featured.slice(0, FEATURED_MAX) : [],
     bio: prof?.bio || "",
   };
   S.saved = JSON.stringify(S.draft);
@@ -211,7 +212,7 @@ function renderThemes() {
 
 function renderFeatured() {
   const row = $("#featuredRow"); row.innerHTML = "";
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < FEATURED_MAX; i++) {
     const id = S.draft.featured[i];
     const it = id && S.catalog[id];
     const slot = document.createElement("div");
@@ -249,7 +250,7 @@ function dropInvOnSlot(i, itemId) {
   if (i < f.length) f[i] = itemId; else f.push(itemId);   // replace that slot, or fill next
   const seen = new Set();                                  // dedup (item can't be featured twice)
   f = f.filter((x) => (seen.has(x) ? false : (seen.add(x), true)));
-  S.draft.featured = f.slice(0, 3);
+  S.draft.featured = f.slice(0, FEATURED_MAX);
   touch(); renderFeatured(); renderInv();
 }
 
@@ -258,7 +259,7 @@ function moveFeatured(from, to) {
   if (from < 0 || from >= f.length) return;
   const [x] = f.splice(from, 1);
   f.splice(Math.max(0, Math.min(to, f.length)), 0, x);
-  S.draft.featured = f.slice(0, 3);
+  S.draft.featured = f.slice(0, FEATURED_MAX);
   touch(); renderFeatured(); renderInv();
 }
 
@@ -339,7 +340,7 @@ function showItemMenu(x, y, id) {
   const m = $("#ctxMenu");
   const rows = [`<div class="ctx-head">Feature: ${esc(it.n)}</div>`];
   const acts = [];
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < FEATURED_MAX; i++) {
     const occId = S.draft.featured[i];
     const occ = occId ? (occId === id ? "★ this item" : (S.catalog[occId]?.n || "item")) : "empty";
     rows.push(`<button class="ctx-item" data-i="${acts.length}">Slot ${i + 1} <span class="ctx-sub">${esc(occ)}</span></button>`);
@@ -365,7 +366,7 @@ function hideCtxMenu() { $("#ctxMenu").classList.add("hidden"); }
 function toggleFeature(id) {
   const i = S.draft.featured.indexOf(id);
   if (i >= 0) S.draft.featured.splice(i, 1);
-  else { if (S.draft.featured.length >= 3) return toast("Showcase is full (3). Remove one first."); S.draft.featured.push(id); }
+  else { if (S.draft.featured.length >= FEATURED_MAX) return toast(`Showcase is full (${FEATURED_MAX}). Remove one first.`); S.draft.featured.push(id); }
   touch(); renderFeatured(); renderInv(); renderPreview();
 }
 
