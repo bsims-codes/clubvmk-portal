@@ -177,6 +177,13 @@ body{
   padding:2px 7px;border-radius:99px;z-index:2;color:var(--gold-soft)}
 .theme-cell.locked .tc-bg{filter:saturate(.6) brightness(.55)}
 
+/* level titles */
+.titles-box{display:flex;flex-wrap:wrap;gap:8px}
+.title-chip{border:1px solid var(--line);background:#0c1020;color:var(--muted);border-radius:20px;
+  padding:6px 14px;font:inherit;font-size:13px;cursor:pointer;transition:all .12s}
+.title-chip:hover{border-color:var(--gold)}
+.title-chip.on{background:var(--gold);color:#201800;border-color:var(--gold);font-weight:600}
+
 /* featured */
 .featured-row{display:flex;gap:12px}
 .featured-row .fslot{flex:1;aspect-ratio:1/.86;border-radius:12px;border:2px dashed var(--line);

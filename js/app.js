@@ -47,12 +47,14 @@ async function loadThemes() {
 
 /* ---------- boot ---------- */
 async function boot() {
-  const [cat, thm] = await Promise.all([
+  const [cat, thm, ttl] = await Promise.all([
     fetch("data/catalog.min.json").then((r) => r.json()),
     loadThemes(),
+    fetch("data/titles.json").then((r) => r.json()).catch(() => ({ levels: {}, totals: [] })),
   ]);
   for (const it of cat) S.catalog[it.id] = it;
   S.themes = thm;
+  S.titles = ttl;
   await applyRarityOverrides();
 
   $("#signInBtn").onclick = signIn;
@@ -140,11 +142,15 @@ async function loadData() {
 
   // existing saved profile for this guild
   const { data: prof } = await sb.from("profiles").select("*").eq("guild_id", S.guild).maybeSingle();
+  // does the profiles table have the hidden_titles column yet? (gates the titles feature)
+  try { const { error } = await sb.from("profiles").select("hidden_titles").limit(1); S.hasHidden = !error; }
+  catch (e) { S.hasHidden = false; }
   S.draft = {
     theme: prof?.theme || CFG.DEFAULT_THEME,
     accent_color: prof?.accent_color || null,
     featured: Array.isArray(prof?.featured) ? prof.featured.slice(0, FEATURED_MAX) : [],
     bio: prof?.bio || "",
+    hidden_titles: Array.isArray(prof?.hidden_titles) ? prof.hidden_titles.slice() : [],
   };
   S.saved = JSON.stringify(S.draft);
   // unlock state (mirrored from the bot): purchased/granted themes + inventory stats
@@ -199,7 +205,42 @@ function wireEditor() {
 }
 
 /* ---------- render everything ---------- */
-function renderAll() { renderThemes(); renderFeatured(); renderRarityFilter(); renderInv(); renderPreview(); syncSaveState(); }
+function renderAll() { renderThemes(); renderTitles(); renderFeatured(); renderRarityFilter(); renderInv(); renderPreview(); syncSaveState(); }
+
+/* ---------- level titles: pick which earned ones show on the card ---------- */
+function earnedTitles() {
+  const out = [];   // [{cat, title}] in card order — highest reached per tier, then total
+  const lv = (S.titles && S.titles.levels) || {};
+  for (const cat of Object.keys(lv)) {
+    const cnt = S.byTier[cat] || 0;
+    let best = null;
+    for (const [thr, title] of lv[cat]) if (cnt >= thr) best = title;
+    if (best) out.push({ cat, title: best });
+  }
+  let bestTotal = null;
+  for (const [thr, title] of (S.titles?.totals || [])) if (S.totalItems >= thr) bestTotal = title;
+  if (bestTotal) out.push({ cat: "total", title: bestTotal });
+  return out;
+}
+function renderTitles() {
+  const panel = $("#titlesPanel"); if (panel) panel.style.display = S.hasHidden ? "" : "none";
+  const box = $("#titlesBox"); if (!box || !S.hasHidden) return;
+  const earned = earnedTitles();
+  const hidden = new Set(S.draft.hidden_titles || []);
+  if (!earned.length) { box.innerHTML = `<span class="muted">No level titles earned yet — collect more to unlock them.</span>`; return; }
+  const shown = earned.filter((e) => !hidden.has(e.cat)).length;
+  $("#titlesNote").textContent = `${shown} of ${earned.length} shown · the card displays up to 4`;
+  box.innerHTML = earned.map((e) => {
+    const on = !hidden.has(e.cat);
+    return `<button class="title-chip${on ? " on" : ""}" data-cat="${e.cat}">${on ? "✓" : "＋"} ${esc(e.title)}</button>`;
+  }).join("");
+  box.querySelectorAll(".title-chip").forEach((b) => b.onclick = () => {
+    const cat = b.dataset.cat, h = new Set(S.draft.hidden_titles || []);
+    if (h.has(cat)) h.delete(cat); else h.add(cat);
+    S.draft.hidden_titles = [...h];
+    touch(); renderTitles(); doRender(true);
+  });
+}
 
 function renderThemes() {
   const g = $("#themeGrid"); g.innerHTML = "";
@@ -422,6 +463,7 @@ async function save() {
     bio: S.draft.bio || null, theme: S.draft.theme, accent_color: S.draft.accent_color,
     featured: S.draft.featured, updated_by: "portal", updated_at: new Date().toISOString(),
   };
+  if (S.hasHidden) row.hidden_titles = S.draft.hidden_titles || [];
   const { error } = await sb.from("profiles").upsert(row, { onConflict: "discord_id,guild_id" });
   if (error) return toast("Save failed: " + error.message, true);
   S.saved = JSON.stringify(S.draft);
@@ -437,6 +479,7 @@ async function doRender(auto) {
   cp.classList.add("rendering");
   if (!auto) { $("#renderBtn").disabled = true; $("#renderBtn").textContent = "Rendering…"; }
   const preview = { theme: S.draft.theme, accent_color: S.draft.accent_color, featured: S.draft.featured, bio: S.draft.bio };
+  if (S.hasHidden) preview.hidden_titles = S.draft.hidden_titles;
   const { data, error } = await sb.from("render_requests")
     .insert({ discord_id: S.discordId, guild_id: S.guild, preview }).select().single();
   if (error) { finishRender(); if (!auto) toast("Render request failed: " + error.message, true); return; }

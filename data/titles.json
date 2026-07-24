@@ -1,0 +1,88 @@
+{
+ "levels": {
+  "legendary": [
+   [
+    5,
+    "Legendary Rookie"
+   ],
+   [
+    10,
+    "Beginner Legend"
+   ],
+   [
+    25,
+    "Certified Legend"
+   ],
+   [
+    50,
+    "Living Legend"
+   ],
+   [
+    100,
+    "Legend of Legends"
+   ]
+  ],
+  "epic": [
+   [
+    10,
+    "Epic Apprentice"
+   ],
+   [
+    25,
+    "Epic Collector"
+   ],
+   [
+    50,
+    "Epic Overlord"
+   ]
+  ],
+  "rare": [
+   [
+    10,
+    "Rare Finder"
+   ],
+   [
+    50,
+    "Rare Connoisseur"
+   ]
+  ],
+  "uncommon": [
+   [
+    25,
+    "Bargain Hunter"
+   ],
+   [
+    100,
+    "Thrift King"
+   ]
+  ],
+  "common": [
+   [
+    100,
+    "Pack Rat"
+   ]
+  ]
+ },
+ "totals": [
+  [
+   10,
+   "Newbie Collector"
+  ],
+  [
+   50,
+   "Seasoned Collector"
+  ],
+  [
+   100,
+   "Master Collector"
+  ],
+  [
+   250,
+   "Grand Collector"
+  ],
+  [
+   500,
+   "Hoarder Supreme"
+  ]
+ ]
+}
