@@ -20,11 +20,36 @@ const S = {
 };
 const PER = 24;
 
+/* ---------- themes (admin-managed via the `themes` table, JSON fallback) ---------- */
+function dbThemeToDef(r) {
+  const t = { name: r.name, bg: r.bg, panel: r.panel, accent: r.accent, fx: r.fx || null };
+  if (r.grad) t.grad = r.grad;
+  if (r.dim != null) t.dim = r.dim;
+  if (r.image_name) t.image = `${CFG.SUPABASE_URL}/storage/v1/object/public/theme-images/${r.image_name}`;
+  const u = { type: r.unlock_type || "club" };
+  if ((u.type === "club" || u.type === "buy") && r.cost != null) u.cost = r.cost;
+  if (u.type === "total" && r.unlock_value != null) u.value = r.unlock_value;
+  if (u.type === "rarity") { if (r.unlock_tier) u.tier = r.unlock_tier; if (r.unlock_value != null) u.value = r.unlock_value; }
+  t.unlock = u;
+  return t;
+}
+async function loadThemes() {
+  try {
+    const { data, error } = await sb.from("themes").select("*").eq("enabled", true).order("sort");
+    if (error || !data || !data.length) throw error || new Error("no themes rows");
+    const out = {};
+    for (const r of data) out[r.id] = dbThemeToDef(r);
+    return out;
+  } catch (e) {
+    return fetch("data/themes.json").then((r) => r.json());  // fallback to the baked catalogue
+  }
+}
+
 /* ---------- boot ---------- */
 async function boot() {
   const [cat, thm] = await Promise.all([
     fetch("data/catalog.min.json").then((r) => r.json()),
-    fetch("data/themes.json").then((r) => r.json()),
+    loadThemes(),
   ]);
   for (const it of cat) S.catalog[it.id] = it;
   S.themes = thm;

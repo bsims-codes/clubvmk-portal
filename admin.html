@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CLUBVMK · Theme Admin</title>
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/styles.css" />
+<style>
+  .admin-wrap { max-width: 1080px; margin: 0 auto; padding: 24px 18px 80px; position: relative; z-index: 1; }
+  .admin-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+  .admin-head h1 { font-family: "Fraunces", serif; font-size: 30px; margin: 0; }
+  .gate { text-align: center; padding: 80px 20px; }
+  .theme-admin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; }
+  .ta-card { position: relative; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); cursor: pointer; aspect-ratio: 3/2; background: #12162a; transition: transform .12s, border-color .12s; }
+  .ta-card:hover { transform: translateY(-2px); border-color: var(--gold); }
+  .ta-card.newcard { display: flex; align-items: center; justify-content: center; border-style: dashed; color: var(--faint); font-size: 15px; }
+  .ta-bg { position: absolute; inset: 0; background-size: cover; background-position: center; }
+  .ta-meta { position: absolute; left: 0; right: 0; bottom: 0; padding: 8px 10px; background: linear-gradient(transparent, rgba(0,0,0,.82)); }
+  .ta-meta .nm { font-weight: 600; font-size: 14px; }
+  .ta-meta .pr { font-size: 12px; color: #ffe08a; }
+  .ta-off { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,.6); color: #ff9a9a; font-size: 10px; padding: 2px 6px; border-radius: 6px; }
+  /* editor */
+  .overlay { position: fixed; inset: 0; background: rgba(4,6,16,.72); backdrop-filter: blur(4px); z-index: 50; display: none; align-items: flex-start; justify-content: center; padding: 30px 14px; overflow: auto; }
+  .overlay.on { display: flex; }
+  .editor { width: 100%; max-width: 560px; background: #12162a; border: 1px solid var(--line); border-radius: 16px; padding: 22px; }
+  .editor h2 { font-family: "Fraunces", serif; margin: 0 0 14px; font-size: 22px; }
+  .fld { margin-bottom: 14px; }
+  .fld label { display: block; font-size: 12px; color: var(--faint); margin-bottom: 5px; text-transform: uppercase; letter-spacing: .04em; }
+  .fld input[type=text], .fld input[type=number], .fld select { width: 100%; padding: 9px 11px; border-radius: 9px; border: 1px solid var(--line); background: #0c1020; color: #eef; font: inherit; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .swatches { display: flex; gap: 14px; }
+  .swatches .sw { flex: 1; }
+  .swatches input[type=color] { width: 100%; height: 40px; border-radius: 9px; border: 1px solid var(--line); background: #0c1020; cursor: pointer; }
+  .drop { border: 2px dashed var(--line); border-radius: 12px; padding: 16px; text-align: center; cursor: pointer; color: var(--faint); }
+  .drop.hasimg { padding: 0; border-style: solid; overflow: hidden; }
+  .drop img { display: block; width: 100%; max-height: 200px; object-fit: cover; }
+  .btnrow { display: flex; justify-content: space-between; gap: 10px; margin-top: 18px; }
+  .btn { padding: 10px 18px; border-radius: 10px; border: none; font: inherit; font-weight: 600; cursor: pointer; }
+  .btn.primary { background: var(--gold); color: #201800; }
+  .btn.ghost { background: transparent; border: 1px solid var(--line); color: #cdd; }
+  .btn.danger { background: transparent; border: 1px solid #7a2b2b; color: #ff9a9a; }
+  .hint { font-size: 12px; color: var(--faint); margin-top: 4px; }
+  .dimrow { display: flex; align-items: center; gap: 10px; }
+  .dimrow input[type=range] { flex: 1; }
+</style>
+</head>
+<body>
+<div class="stars" aria-hidden="true"></div>
+<div class="aurora" aria-hidden="true"></div>
+
+<header class="topbar">
+  <a class="brand" href="./">CLUBVMK <span>Collector's Vault</span></a>
+  <div id="whoami" class="muted"></div>
+</header>
+
+<main class="admin-wrap">
+  <div id="gate" class="gate">
+    <h1>🎨 Theme Admin</h1>
+    <p class="muted" id="gateMsg">Sign in with Discord to manage profile themes.</p>
+    <button id="signInBtn" class="btn primary" style="margin-top:14px">Sign in with Discord</button>
+  </div>
+
+  <div id="panel" style="display:none">
+    <div class="admin-head">
+      <h1>🎨 Theme Admin</h1>
+      <div>
+        <button id="newBtn" class="btn primary">+ New theme</button>
+        <button id="signOutBtn" class="btn ghost">Sign out</button>
+      </div>
+    </div>
+    <p class="muted" style="margin:-8px 0 16px">Changes go live in Discord within ~2 minutes (no restart). Uploaded images and prices sync automatically.</p>
+    <div id="grid" class="theme-admin-grid"></div>
+  </div>
+</main>
+
+<!-- editor overlay -->
+<div id="overlay" class="overlay">
+  <div class="editor">
+    <h2 id="edTitle">Edit theme</h2>
+    <div class="fld">
+      <label>Background image</label>
+      <div id="drop" class="drop">Click to upload a background image<br><span class="hint">JPG / PNG / WebP — colours auto-sample from it</span></div>
+      <input id="file" type="file" accept="image/*" style="display:none" />
+    </div>
+    <div class="fld">
+      <label>Name</label>
+      <input id="edName" type="text" maxlength="40" placeholder="e.g. Dug's Treats" />
+    </div>
+    <div class="fld">
+      <label>Colours <span class="hint" id="sampleHint"></span></label>
+      <div class="swatches">
+        <div class="sw"><input id="edBg" type="color" title="Background" /><div class="hint" style="text-align:center">bg</div></div>
+        <div class="sw"><input id="edPanel" type="color" title="Panel" /><div class="hint" style="text-align:center">panel</div></div>
+        <div class="sw"><input id="edAccent" type="color" title="Accent" /><div class="hint" style="text-align:center">accent</div></div>
+      </div>
+    </div>
+    <div class="fld" id="dimFld">
+      <label>Image darkening (dim) — <span id="dimVal">0.50</span></label>
+      <div class="dimrow"><span class="hint">light</span><input id="edDim" type="range" min="0" max="0.8" step="0.02" value="0.5" /><span class="hint">dark</span></div>
+      <div class="hint">Bright images need more dim so the card text stays readable.</div>
+    </div>
+    <div class="row2">
+      <div class="fld">
+        <label>Unlock type</label>
+        <select id="edUnlockType">
+          <option value="club">Buy · Club Coins</option>
+          <option value="buy">Buy · Yeti Credits</option>
+          <option value="total">Earn · total items</option>
+          <option value="rarity">Earn · rarity count</option>
+          <option value="default">Free (default)</option>
+        </select>
+      </div>
+      <div class="fld" id="costFld">
+        <label id="costLbl">Price (coins)</label>
+        <input id="edCost" type="number" min="0" value="5" />
+      </div>
+    </div>
+    <div class="fld" id="tierFld" style="display:none">
+      <label>Rarity tier</label>
+      <select id="edTier">
+        <option value="common">common</option><option value="uncommon">uncommon</option>
+        <option value="rare">rare</option><option value="epic">epic</option>
+        <option value="legendary">legendary</option>
+      </select>
+    </div>
+    <div class="row2">
+      <div class="fld">
+        <label>Sort order (low = first)</label>
+        <input id="edSort" type="number" value="100" />
+      </div>
+      <div class="fld">
+        <label>Enabled</label>
+        <select id="edEnabled"><option value="true">Yes — visible</option><option value="false">No — hidden</option></select>
+      </div>
+    </div>
+    <div class="btnrow">
+      <button id="delBtn" class="btn danger">Delete</button>
+      <div style="display:flex;gap:10px">
+        <button id="cancelBtn" class="btn ghost">Cancel</button>
+        <button id="saveBtn" class="btn primary">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>
