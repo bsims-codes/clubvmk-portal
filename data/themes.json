@@ -690,5 +690,53 @@
     120
    ]
   ]
+ },
+ "dug": {
+  "name": "Dug",
+  "bg": [
+   14,
+   20,
+   12
+  ],
+  "panel": [
+   26,
+   34,
+   22
+  ],
+  "accent": [
+   240,
+   186,
+   84
+  ],
+  "fx": "image",
+  "unlock": {
+   "type": "club",
+   "cost": 5
+  },
+  "image": "assets/bg/dug1.jpg"
+ },
+ "dugtreats": {
+  "name": "Dug's Treats",
+  "bg": [
+   20,
+   15,
+   11
+  ],
+  "panel": [
+   38,
+   28,
+   20
+  ],
+  "accent": [
+   236,
+   168,
+   78
+  ],
+  "fx": "image",
+  "unlock": {
+   "type": "club",
+   "cost": 5
+  },
+  "image": "assets/bg/dug2.jpg"
  }
 }
