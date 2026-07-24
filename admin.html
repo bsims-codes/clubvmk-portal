@@ -193,6 +193,14 @@
             <select id="edEnabled"><option value="true">Yes — visible</option><option value="false">No — hidden</option></select>
           </div>
         </div>
+        <div class="fld" id="grantFld" style="display:none; border-top:1px solid var(--line); padding-top:14px">
+          <label>🔓 Unlock this theme for a player</label>
+          <div style="display:flex; gap:8px">
+            <select id="grantUser" style="flex:1"></select>
+            <button id="grantBtn" type="button" class="btn ghost small">Grant</button>
+          </div>
+          <div class="hint">Applies to their account within a few seconds — handy after re-keying a theme, or comping a purchase.</div>
+        </div>
       </div>
     </div>
     <div class="btnrow">

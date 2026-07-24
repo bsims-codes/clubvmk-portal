@@ -9,7 +9,7 @@ const ADMIN_IDS = ["886570059974201405"];   // Discord ids allowed to manage the
 const $ = (s) => document.querySelector(s);
 const IMG_BASE = `${CFG.SUPABASE_URL}/storage/v1/object/public/theme-images/`;
 
-const A = { discordId: null, themes: [], editing: null,
+const A = { discordId: null, themes: [], editing: null, users: [],
             img: null, crop: null, cropURL: null, rafPending: false };
 
 /* ---------- helpers ---------- */
@@ -36,6 +36,29 @@ async function render(session) {
   if (!isAdmin) { $("#gate").style.display = ""; $("#panel").style.display = "none"; $("#signInBtn").style.display = "none"; $("#gateMsg").textContent = "This account isn't a theme admin. (" + (A.discordId || "no id") + ")"; return; }
   $("#gate").style.display = "none"; $("#panel").style.display = "";
   await loadThemes();
+  loadUsers();   // for the "unlock for a player" picker (best-effort)
+}
+
+async function loadUsers() {
+  try {
+    const { data, error } = await sb.rpc("admin_users");
+    if (error) throw error;
+    A.users = (data || []).filter((u) => u.discord_id);
+  } catch (e) { A.users = []; }
+  const sel = $("#grantUser");
+  sel.innerHTML = A.users.length
+    ? A.users.map((u) => `<option value="${u.discord_id}">${(u.display_name || u.discord_id)}</option>`).join("")
+    : `<option value="">(run schema_theme_grants.sql to enable)</option>`;
+}
+
+async function grantTheme() {
+  const t = A.editing; if (!t) return;
+  const uid = $("#grantUser").value;
+  if (!uid) return toast("Pick a player (and run schema_theme_grants.sql if the list is empty).");
+  const name = (A.users.find((u) => u.discord_id === uid) || {}).display_name || uid;
+  const { error } = await sb.from("theme_grants").insert({ discord_id: uid, theme_id: t.id, created_by: String(A.discordId) });
+  if (error) return toast("Grant failed: " + error.message);
+  toast(`Unlocking "${t.name}" for ${name} — applies within a few seconds.`);
 }
 
 /* ---------- data ---------- */
@@ -175,6 +198,7 @@ function openEditor(t) {
   A.editing = t; A.img = null; A.crop = null; A.cropURL = null;
   $("#edTitle").textContent = t ? `Edit — ${t.name}` : "New theme";
   $("#delBtn").style.display = t ? "" : "none";
+  $("#grantFld").style.display = t ? "" : "none";   // grant only after a theme has an id
   $("#sampleHint").textContent = "";
   $("#cropWrap").style.display = "none";
   $("#dropEmpty").style.display = "";
@@ -280,6 +304,7 @@ async function boot() {
   $("#cancelBtn").onclick = closeEditor;
   $("#saveBtn").onclick = save;
   $("#delBtn").onclick = del;
+  $("#grantBtn").onclick = grantTheme;
   $("#dropEmpty").onclick = () => $("#file").click();
   $("#cropChange").onclick = () => $("#file").click();
   $("#file").onchange = (e) => onFile(e.target.files[0]);
