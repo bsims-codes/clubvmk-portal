@@ -44,12 +44,19 @@ async function loadCatalog() {
   if (Object.keys(D.catalog).length) return;
   const cat = await fetch("data/catalog.min.json").then((r) => r.json());
   for (const it of cat) D.catalog[it.id] = { id: it.id, n: it.n, r: it.r, c: it.c };
-  // apply live rarity overrides so counts match the game
+  // apply live rarity overrides so counts match the game; items the curator
+  // marked "remove" are dropped from the catalogue entirely (as the bot does),
+  // so they don't inflate uncollected/coverage counts.
+  D.removed = 0;
   try {
     for (let from = 0; ; from += 1000) {
       const { data, error } = await sb.from("overrides").select("item_id,tier").range(from, from + 999);
       if (error || !data || !data.length) break;
-      for (const o of data) if (D.catalog[o.item_id]) D.catalog[o.item_id].r = o.tier;
+      for (const o of data) {
+        if (!D.catalog[o.item_id]) continue;
+        if (o.tier === "remove") { delete D.catalog[o.item_id]; D.removed++; }
+        else D.catalog[o.item_id].r = o.tier;
+      }
       if (data.length < 1000) break;
     }
   } catch (e) { /* overrides optional */ }
@@ -76,18 +83,21 @@ async function loadAll() {
 
 /* ---------- overview ---------- */
 function renderCards() {
-  const collectedIds = new Set(D.itemStats.map((r) => r.item_id));
+  // count only items still in the catalogue (removed items are already dropped)
+  const inCat = D.itemStats.filter((r) => D.catalog[r.item_id]);
+  const collectedInCat = inCat.length;
   const catN = Object.keys(D.catalog).length;
-  const uncollected = catN - [...collectedIds].filter((id) => D.catalog[id]).length;
-  const totalCopies = D.itemStats.reduce((a, r) => a + Number(r.copies || 0), 0);
+  const uncollected = catN - collectedInCat;
+  const totalCopies = inCat.reduce((a, r) => a + Number(r.copies || 0), 0);
   const grants = D.themeOwners.length;
   const cards = [
     ["Players", num(D.players.length)],
     ["Items in catalogue", num(catN)],
-    ["Distinct items collected", num(collectedIds.size)],
+    ["Distinct items collected", num(collectedInCat)],
     ["Never collected", num(uncollected)],
     ["Total copies owned", num(totalCopies)],
     ["Theme purchases", num(grants)],
+    ["Removed (excluded)", num(D.removed || 0)],
   ];
   $("#cards").innerHTML = cards.map(([k, v]) => `<div class="card"><div class="v">${v}</div><div class="k">${k}</div></div>`).join("");
 }
