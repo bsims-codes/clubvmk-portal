@@ -69,16 +69,21 @@ async function boot() {
 // Apply the same rarity overrides the bot uses, from the curator's `overrides`
 // table, so the portal shows identical rarities/colours/counts to Discord.
 async function applyRarityOverrides() {
+  // The overrides table is the SINGLE source of truth for rarity (same as the bot):
+  // every item defaults to common, then the table sets the rest. The baked rarity
+  // in catalog.min.json is ignored so the portal can never disagree with the game.
   try {
+    const map = {};
     let from = 0; const page = 1000;
     for (;;) {
       const { data, error } = await sb.from("overrides").select("item_id,tier").order("item_id").range(from, from + page - 1);
       if (error) throw error;
-      for (const o of data || []) if (S.catalog[o.item_id]) S.catalog[o.item_id].r = o.tier;
+      for (const o of data || []) map[o.item_id] = o.tier;
       if (!data || data.length < page) break;
       from += page;
     }
-  } catch (e) { console.warn("overrides load failed:", e.message); }
+    for (const id in S.catalog) S.catalog[id].r = map[id] || "common";
+  } catch (e) { console.warn("overrides load failed — keeping baked rarities as fallback:", e.message); }
 }
 
 async function signIn() {

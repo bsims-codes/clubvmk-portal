@@ -44,22 +44,25 @@ async function loadCatalog() {
   if (Object.keys(D.catalog).length) return;
   const cat = await fetch("data/catalog.min.json").then((r) => r.json());
   for (const it of cat) D.catalog[it.id] = { id: it.id, n: it.n, r: it.r, c: it.c };
-  // apply live rarity overrides so counts match the game; items the curator
-  // marked "remove" are dropped from the catalogue entirely (as the bot does),
-  // so they don't inflate uncollected/coverage counts.
+  // The overrides table is the SINGLE source of truth: default everything to common,
+  // apply the table, and drop items the curator marked "remove" (as the bot does).
+  // The baked rarity in catalog.min.json is ignored so this never disagrees with the game.
   D.removed = 0;
   try {
+    const map = {};
     for (let from = 0; ; from += 1000) {
       const { data, error } = await sb.from("overrides").select("item_id,tier").order("item_id").range(from, from + 999);
-      if (error || !data || !data.length) break;
-      for (const o of data) {
-        if (!D.catalog[o.item_id]) continue;
-        if (o.tier === "remove") { delete D.catalog[o.item_id]; D.removed++; }
-        else D.catalog[o.item_id].r = o.tier;
-      }
-      if (data.length < 1000) break;
+      if (error) throw error;
+      for (const o of data || []) map[o.item_id] = o.tier;
+      if (!data || data.length < 1000) break;
     }
-  } catch (e) { /* overrides optional */ }
+    for (const id in D.catalog) D.catalog[id].r = "common";
+    for (const id in map) {
+      if (!D.catalog[id]) continue;
+      if (map[id] === "remove") { delete D.catalog[id]; D.removed++; }
+      else D.catalog[id].r = map[id];
+    }
+  } catch (e) { /* fetch failed — keep baked rarities as fallback */ }
   try {
     const { data } = await sb.from("themes").select("id,name");
     for (const t of data || []) D.themeNames[t.id] = t.name;
