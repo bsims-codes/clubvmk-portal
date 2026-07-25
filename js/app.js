@@ -72,7 +72,7 @@ async function applyRarityOverrides() {
   try {
     let from = 0; const page = 1000;
     for (;;) {
-      const { data, error } = await sb.from("overrides").select("item_id,tier").range(from, from + page - 1);
+      const { data, error } = await sb.from("overrides").select("item_id,tier").order("item_id").range(from, from + page - 1);
       if (error) throw error;
       for (const o of data || []) if (S.catalog[o.item_id]) S.catalog[o.item_id].r = o.tier;
       if (!data || data.length < page) break;

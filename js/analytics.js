@@ -50,7 +50,7 @@ async function loadCatalog() {
   D.removed = 0;
   try {
     for (let from = 0; ; from += 1000) {
-      const { data, error } = await sb.from("overrides").select("item_id,tier").range(from, from + 999);
+      const { data, error } = await sb.from("overrides").select("item_id,tier").order("item_id").range(from, from + 999);
       if (error || !data || !data.length) break;
       for (const o of data) {
         if (!D.catalog[o.item_id]) continue;
