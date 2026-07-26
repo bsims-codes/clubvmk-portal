@@ -99,6 +99,56 @@ async function selectPlayer(p, quiet) {
   if (!quiet) renderList();
 }
 
+/* ---------- item pickers ----------
+   A <datalist> renders the option's VALUE in bold and its text content
+   underneath, so the value has to be the friendly name — otherwise the list
+   reads as "clothing:74086". Names are unique for ~98% of the catalogue; the
+   handful that collide get their id appended so they stay resolvable. */
+// Some catalogue names carry stray leading/trailing spaces, so always compare
+// trimmed — otherwise those items could never be matched back from the input.
+const itemName = (it) => String(it.n || it.id || "").trim();
+
+function pickerValue(it, dupeNames) {
+  const n = itemName(it);
+  return dupeNames.has(n) ? `${n}  (${it.id})` : n;
+}
+
+function resolveItemId(text, pool) {
+  const t = (text || "").trim();
+  if (!t) return null;
+  if (P.catalog[t]) return t;                       // a raw id was typed
+  const m = t.match(/\(([^)]+)\)\s*$/);             // "Name  (pin:1234)"
+  if (m && P.catalog[m[1]]) return m[1];
+  const hits = pool.filter((it) => itemName(it) === t);
+  return hits.length === 1 ? hits[0].id : null;
+}
+
+function wireItemPicker(inputId, listId, poolFn, counts) {
+  const input = $("#" + inputId), list = $("#" + listId);
+  if (!input || !list) return;
+  const refresh = () => {
+    const q = input.value.trim().toLowerCase();
+    const pool = poolFn();
+    const seen = {}, dupes = new Set();
+    for (const it of pool) {
+      const n = itemName(it);
+      if (seen[n]) dupes.add(n); else seen[n] = 1;
+    }
+    const rows = (q ? pool.filter((it) => itemName(it).toLowerCase().includes(q)) : pool)
+      .slice(0, 60);   // datalists get sluggish past a few dozen entries
+    list.innerHTML = rows.map((it) => {
+      const c = counts ? counts[it.id] : null;
+      return `<option value="${esc(pickerValue(it, dupes))}">${c ? `×${c} owned` : ""}</option>`;
+    }).join("");
+  };
+  input.oninput = refresh;
+  refresh();
+}
+
+const ownedPool = () => P.inv.map((r) => P.catalog[r.item_id] || { id: r.item_id, n: r.item_id })
+                             .filter(Boolean);
+const allPool = () => Object.values(P.catalog);
+
 /* ---------- detail + tools ---------- */
 function renderDetail() {
   const p = P.sel;
@@ -188,29 +238,43 @@ function renderDetail() {
       </div>
     </div>
 
-    <datalist id="ownedList">${P.inv.map((r) => {
-      const it = P.catalog[r.item_id];
-      return `<option value="${esc(r.item_id)}">${esc(it ? it.n : r.item_id)} ×${r.count}</option>`;
-    }).join("")}</datalist>
-    <datalist id="allList">${Object.values(P.catalog).slice(0, 2000).map((it) =>
-      `<option value="${esc(it.id)}">${esc(it.n)}</option>`).join("")}</datalist>`;
+    <datalist id="ownedList"></datalist>
+    <datalist id="allList"></datalist>`;
+
+  // populated live as you type, so the whole catalogue is reachable without
+  // putting 14k <option> nodes in the DOM
+  const counts = {};
+  for (const r of P.inv) counts[r.item_id] = r.count;
+  wireItemPicker("rfItem", "ownedList", ownedPool, counts);
+  wireItemPicker("giItem", "allList", allPool, null);
 
   const v = (id) => $("#" + id).value.trim();
   const n = (id) => Number($("#" + id).value || 0);
   const ann = (id) => $("#" + id).checked;      // announce publicly in Discord?
-  $("#rfGo").onclick = () => v("rfItem")
-    ? queueAction("refund", { item_id: v("rfItem"), qty: n("rfQty") || 1,
-                              coins: n("rfCoins"), announce: ann("rfAnn") },
-                  `refund ${v("rfItem")}`)
-    : toast("Pick an item first", true);
-  $("#giGive").onclick = () => v("giItem")
-    ? queueAction("give", { item_id: v("giItem"), qty: n("giQty") || 1, announce: ann("giAnn") },
-                  `give ${v("giItem")}`)
-    : toast("Pick an item first", true);
-  $("#giTake").onclick = () => v("giItem")
-    ? queueAction("take", { item_id: v("giItem"), qty: n("giQty") || 1, announce: ann("giAnn") },
-                  `take ${v("giItem")}`)
-    : toast("Pick an item first", true);
+  // the inputs hold friendly names — turn them back into ids before queueing
+  const itemFrom = (inputId, pool) => {
+    const raw = v(inputId);
+    if (!raw) { toast("Pick an item first", true); return null; }
+    const id = resolveItemId(raw, pool());
+    if (!id) toast(`Couldn't match "${raw}" to an item — pick one from the list.`, true);
+    return id;
+  };
+  $("#rfGo").onclick = () => {
+    const id = itemFrom("rfItem", ownedPool); if (!id) return;
+    queueAction("refund", { item_id: id, qty: n("rfQty") || 1,
+                            coins: n("rfCoins"), announce: ann("rfAnn") },
+                `refund ${P.catalog[id]?.n || id}`);
+  };
+  $("#giGive").onclick = () => {
+    const id = itemFrom("giItem", allPool); if (!id) return;
+    queueAction("give", { item_id: id, qty: n("giQty") || 1, announce: ann("giAnn") },
+                `give ${P.catalog[id]?.n || id}`);
+  };
+  $("#giTake").onclick = () => {
+    const id = itemFrom("giItem", allPool); if (!id) return;
+    queueAction("take", { item_id: id, qty: n("giQty") || 1, announce: ann("giAnn") },
+                `take ${P.catalog[id]?.n || id}`);
+  };
   $("#cGo").onclick = () => n("cAmt")
     ? queueAction("coins", { kind: v("cKind"), amount: n("cAmt"), announce: ann("cAnn") },
                   `${v("cKind")} ${n("cAmt")}`)
