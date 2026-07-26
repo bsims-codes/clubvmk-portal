@@ -56,10 +56,14 @@ async function loadCatalog() {
       for (const o of data || []) map[o.item_id] = o.tier;
       if (!data || data.length < 1000) break;
     }
+    // 'remove' and 'hold' are BOTH out of the game (bot.py skips each when
+    // building the spawn pool), so neither belongs in the catalogue totals.
+    D.held = 0;
     for (const id in D.catalog) D.catalog[id].r = "common";
     for (const id in map) {
       if (!D.catalog[id]) continue;
       if (map[id] === "remove") { delete D.catalog[id]; D.removed++; }
+      else if (map[id] === "hold") { delete D.catalog[id]; D.held++; }
       else D.catalog[id].r = map[id];
     }
   } catch (e) { /* fetch failed — keep baked rarities as fallback */ }
@@ -88,17 +92,26 @@ async function rpcAll(name, orderCols) {
 
 async function loadAll() {
   await loadCatalog();
-  const [pl, to, is] = await Promise.all([
+  const [pl, to, is, pr] = await Promise.all([
     rpcAll("analytics_players", ["discord_id"]),
     rpcAll("analytics_theme_owners", ["theme_id", "discord_id"]),
     rpcAll("analytics_item_stats", ["item_id"]),
+    rpcAll("analytics_player_rarity", ["discord_id", "tier"]),
   ]);
   for (const r of [pl, to, is]) if (r.error) { toast("Query failed: " + r.error.message + " — did you run schema_analytics.sql?"); return; }
   D.players = pl.data || [];
   D.themeOwners = to.data || [];
   D.itemStats = is.data || [];
+  // Optional — present only once the newer schema_analytics.sql has been run.
+  D.hasRarity = !pr.error;
+  D.playerRarity = pr.data || [];
+  if (pr.error) toast("Rarity/wallet columns need the updated schema_analytics.sql", true);
+  // fold the per-player rarity rows onto each player row: p.rar.legendary etc.
+  const byPlayer = {};
+  for (const r of D.playerRarity) (byPlayer[r.discord_id] ||= {})[r.tier] = Number(r.distinct_items || 0);
+  for (const p of D.players) p.rar = byPlayer[p.discord_id] || {};
   renderCards();
-  renderThemes(); renderPlayers(); renderItems();
+  renderThemes(); renderRarity(); renderPlayers(); renderItems();
 }
 
 /* ---------- overview ---------- */
@@ -110,14 +123,27 @@ function renderCards() {
   const uncollected = catN - collectedInCat;
   const totalCopies = inCat.reduce((a, r) => a + Number(r.copies || 0), 0);
   const grants = D.themeOwners.length;
+  const coverage = catN ? ((collectedInCat / catN) * 100).toFixed(1) + "%" : "—";
+  const soleOwner = inCat.filter((r) => Number(r.owners || 0) === 1).length;
+  const avgItems = D.players.length
+    ? Math.round(D.players.reduce((a, p) => a + Number(p.distinct_items || 0), 0) / D.players.length) : 0;
+  const club = D.players.reduce((a, p) => a + Number(p.club_coins || 0), 0);
+  const yeti = D.players.reduce((a, p) => a + Number(p.yeti_credits || 0), 0);
   const cards = [
     ["Players", num(D.players.length)],
     ["Items in catalogue", num(catN)],
     ["Distinct items collected", num(collectedInCat)],
+    ["Catalogue coverage", coverage],
     ["Never collected", num(uncollected)],
     ["Total copies owned", num(totalCopies)],
+    ["Duplicate copies", num(totalCopies - collectedInCat)],
+    ["Owned by one player", num(soleOwner)],
+    ["Avg items / player", num(avgItems)],
+    ["🪙 Club Coins in circulation", num(club)],
+    ["❄️ Yeti Credits in circulation", num(yeti)],
     ["Theme purchases", num(grants)],
     ["Removed (excluded)", num(D.removed || 0)],
+    ["Held (awaiting review)", num(D.held || 0)],
   ];
   $("#cards").innerHTML = cards.map(([k, v]) => `<div class="card"><div class="v">${v}</div><div class="k">${k}</div></div>`).join("");
 }
@@ -139,17 +165,66 @@ function renderThemes() {
     || `<tr><td colspan="3" class="muted2">No theme purchases yet.</td></tr>`;
 }
 
+/* ---------- rarity coverage ---------- */
+function renderRarity() {
+  const stats = {}; for (const r of D.itemStats) stats[r.item_id] = r;
+  const agg = {};
+  for (const r of RARITY) agg[r] = { cat: 0, got: 0, copies: 0, sole: 0 };
+  // D.catalog already has "remove"-tagged items dropped, so this only counts
+  // items actually in the game.
+  for (const it of Object.values(D.catalog)) {
+    const a = agg[it.r];
+    if (!a) continue;
+    a.cat++;
+    const s = stats[it.id];
+    if (!s) continue;                       // in the catalogue, owned by nobody
+    a.got++;
+    a.copies += Number(s.copies || 0);
+    if (Number(s.owners || 0) === 1) a.sole++;
+  }
+  $("#rarityTbl").querySelector("tbody").innerHTML = RARITY.map((r) => {
+    const a = agg[r];
+    const pct = a.cat ? ((a.got / a.cat) * 100).toFixed(1) : "0.0";
+    return `<tr><td>${pill(r)}</td><td class="num">${num(a.cat)}</td>` +
+      `<td class="num">${num(a.got)}</td><td class="num">${pct}%</td>` +
+      `<td class="num">${num(a.cat - a.got)}</td><td class="num">${num(a.copies)}</td>` +
+      `<td class="num">${num(a.sole)}</td></tr>`;
+  }).join("");
+}
+
 /* ---------- players ---------- */
+// Sort key -> value, so rarity columns and the derived ones sort like the rest.
+function playerVal(p, k) {
+  if (k === "display_name") return p.name.toLowerCase();
+  if (RARITY.includes(k)) return Number(p.rar?.[k] || 0);
+  if (k === "dupes") return Number(p.total_copies || 0) - Number(p.distinct_items || 0);
+  return Number(p[k] || 0);
+}
 function renderPlayers() {
   const q = $("#playerSearch").value.trim().toLowerCase();
+  const catN = Object.keys(D.catalog).length || 1;
   let rows = D.players.map((p) => ({ ...p, name: p.display_name || p.discord_id }));
   rows = rows.filter((p) => !q || p.name.toLowerCase().includes(q) || (p.discord_id || "").includes(q));
   const s = D.playerSort;
-  rows.sort((a, b) => { const av = s.k === "display_name" ? a.name.toLowerCase() : Number(a[s.k] || 0), bv = s.k === "display_name" ? b.name.toLowerCase() : Number(b[s.k] || 0); return (av < bv ? -1 : av > bv ? 1 : 0) * s.dir; });
+  rows.sort((a, b) => { const av = playerVal(a, s.k), bv = playerVal(b, s.k); return (av < bv ? -1 : av > bv ? 1 : 0) * s.dir; });
   $("#playerTotal").textContent = `${rows.length} players`;
-  $("#playerTbl").querySelector("tbody").innerHTML = rows.map((p) =>
-    `<tr><td>${esc(p.name)}</td><td class="num">${num(p.distinct_items)}</td><td class="num">${num(p.total_copies)}</td><td class="num">${num(p.themes)}</td></tr>`).join("")
-    || `<tr><td colspan="4" class="muted2">No players yet.</td></tr>`;
+  const cells = (p) => {
+    const rar = RARITY.map((r) => `<td class="num r-${r}">${num(p.rar?.[r] || 0)}</td>`).join("");
+    const dupes = Number(p.total_copies || 0) - Number(p.distinct_items || 0);
+    const pct = ((Number(p.distinct_items || 0) / catN) * 100).toFixed(1);
+    return `<td>${esc(p.name)}</td>` +
+      `<td class="num">${num(p.distinct_items)}</td>` +
+      `<td class="num">${pct}%</td>` +
+      rar +
+      `<td class="num">${num(p.total_copies)}</td>` +
+      `<td class="num">${num(dupes)}</td>` +
+      `<td class="num">${num(p.club_coins || 0)}</td>` +
+      `<td class="num">${num(p.yeti_credits || 0)}</td>` +
+      `<td class="num">${num(p.themes)}</td>`;
+  };
+  $("#playerTbl").querySelector("tbody").innerHTML =
+    rows.map((p) => `<tr>${cells(p)}</tr>`).join("")
+    || `<tr><td colspan="12" class="muted2">No players yet.</td></tr>`;
 }
 
 /* ---------- items ---------- */

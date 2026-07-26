@@ -36,6 +36,13 @@
   .tablewrap { max-height: 440px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; }
   .pill { display: inline-block; padding: 1px 8px; border-radius: 8px; font-size: 11px; font-weight: 600; }
   .r-legendary{background:#5a3a00;color:#ffcf6a}.r-epic{background:#3a1f5e;color:#d6a6ff}.r-rare{background:#0f2c5e;color:#8fb6ff}.r-uncommon{background:#123a20;color:#84e0a0}.r-common{background:#2a2f47;color:#c4cbe6}
+  /* rarity-tinted numeric columns: text only, so they don't read as filled chips */
+  th.r-legendary,td.r-legendary{background:none;color:var(--leg)}
+  th.r-epic,td.r-epic{background:none;color:var(--epic)}
+  th.r-rare,td.r-rare{background:none;color:var(--rare)}
+  th.r-uncommon,td.r-uncommon{background:none;color:var(--unc)}
+  th.r-common,td.r-common{background:none;color:var(--com)}
+  #playerTbl td:first-child{white-space:nowrap}
   .owners { color: var(--muted); font-size: 13px; }
   .muted2 { color: var(--faint); }
   a.link { color: var(--gold); cursor: pointer; }
@@ -79,13 +86,36 @@
     </section>
 
     <section class="blk">
+      <h2 class="sec">💎 Rarity coverage</h2>
+      <p class="subtle">How much of each rarity tier has ever been collected, and how the copies in circulation are spread.</p>
+      <div class="tablewrap"><table id="rarityTbl"><thead><tr>
+        <th>Rarity</th>
+        <th class="num">In catalogue</th>
+        <th class="num">Collected</th>
+        <th class="num">Coverage</th>
+        <th class="num">Never collected</th>
+        <th class="num">Copies owned</th>
+        <th class="num" title="Items only one player owns">Sole owner</th>
+      </tr></thead><tbody></tbody></table></div>
+    </section>
+
+    <section class="blk">
       <h2 class="sec">👤 Players</h2>
-      <p class="subtle">Collection size and how many themes each player owns.</p>
+      <p class="subtle">Collection size, rarity breakdown, wallet and themes owned. Click any column to sort.</p>
       <div class="toolbar"><input id="playerSearch" type="text" placeholder="Find a player…" /><span class="muted2" id="playerTotal"></span></div>
       <div class="tablewrap"><table id="playerTbl"><thead><tr>
         <th data-k="display_name">Player</th>
-        <th data-k="distinct_items" class="num">Unique items</th>
-        <th data-k="total_copies" class="num">Total copies</th>
+        <th data-k="distinct_items" class="num">Unique</th>
+        <th class="num">Catalogue</th>
+        <th data-k="legendary" class="num r-legendary" title="Distinct legendary items owned">Leg</th>
+        <th data-k="epic" class="num r-epic" title="Distinct epic items owned">Epic</th>
+        <th data-k="rare" class="num r-rare" title="Distinct rare items owned">Rare</th>
+        <th data-k="uncommon" class="num r-uncommon" title="Distinct uncommon items owned">Unc</th>
+        <th data-k="common" class="num r-common" title="Distinct common items owned">Com</th>
+        <th data-k="total_copies" class="num">Copies</th>
+        <th data-k="dupes" class="num" title="Copies beyond the first of each item">Dupes</th>
+        <th data-k="club_coins" class="num" title="Club Coins (summed across servers)">🪙 Club</th>
+        <th data-k="yeti_credits" class="num" title="Yeti Credits (summed across servers)">❄️ Yeti</th>
         <th data-k="themes" class="num">Themes</th>
       </tr></thead><tbody></tbody></table></div>
     </section>
