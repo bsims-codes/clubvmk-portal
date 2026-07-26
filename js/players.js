@@ -127,47 +127,62 @@ function renderDetail() {
         <h3>💸 Refund a purchase</h3>
         <p>Takes the item back and returns Club Coins — for a double-buy in the shop.</p>
         <div class="row">
-          <input id="rfItem" type="text" list="ownedList" class="grow" placeholder="Item they own…" />
-          <input id="rfQty" type="number" value="1" min="1" />
-          <input id="rfCoins" type="number" value="0" min="0" placeholder="coins" />
+          <label class="fld grow"><span>Item they own</span>
+            <input id="rfItem" type="text" list="ownedList" placeholder="Start typing a name…" /></label>
+          <label class="fld"><span>Copies to take</span>
+            <input id="rfQty" type="number" value="1" min="1" /></label>
+          <label class="fld"><span>🪙 Coins to return</span>
+            <input id="rfCoins" type="number" value="0" min="0" /></label>
           <button class="btn gold" id="rfGo">Refund</button>
         </div>
-        <div class="hintline">Pick from what they actually hold; coins are added back.</div>
+        <label class="ann"><input type="checkbox" id="rfAnn" checked /> Announce in the server
+          <span class="muted2">— keeps the correction transparent</span></label>
       </div>
 
       <div class="tool">
         <h3>🎁 Give / take items</h3>
+        <p>Give works on any item in the catalogue; take only on what they hold.</p>
         <div class="row">
-          <input id="giItem" type="text" list="allList" class="grow" placeholder="Any item…" />
-          <input id="giQty" type="number" value="1" min="1" max="100" />
+          <label class="fld grow"><span>Item</span>
+            <input id="giItem" type="text" list="allList" placeholder="Start typing a name…" /></label>
+          <label class="fld"><span>Quantity</span>
+            <input id="giQty" type="number" value="1" min="1" max="100" /></label>
           <button class="btn" id="giGive">Give</button>
           <button class="btn danger" id="giTake">Take</button>
         </div>
+        <label class="ann"><input type="checkbox" id="giAnn" /> Announce in the server</label>
       </div>
 
       <div class="tool">
         <h3>🪙 Adjust coins</h3>
+        <p>Negative removes. The bot refuses to take a balance below zero.</p>
         <div class="row">
-          <select id="cKind"><option value="club">Club Coins</option><option value="yeti">Yeti Credits</option></select>
-          <input id="cAmt" type="number" value="0" placeholder="+/-" />
+          <label class="fld"><span>Currency</span>
+            <select id="cKind"><option value="club">🪙 Club Coins</option>
+              <option value="yeti">❄️ Yeti Credits</option></select></label>
+          <label class="fld"><span>Amount (+ / −)</span>
+            <input id="cAmt" type="number" value="0" /></label>
           <button class="btn" id="cGo">Apply</button>
         </div>
-        <div class="hintline">Negative removes. The bot refuses to go below zero.</div>
+        <label class="ann"><input type="checkbox" id="cAnn" /> Announce in the server</label>
       </div>
 
       <div class="tool">
         <h3>🎨 Themes</h3>
         <div class="row">
-          <select id="thKey" class="grow">${themeOpts}</select>
+          <label class="fld grow"><span>Theme</span>
+            <select id="thKey">${themeOpts}</select></label>
           <button class="btn" id="thGrant">Grant</button>
           <button class="btn danger" id="thRevoke">Revoke</button>
         </div>
+        <label class="ann"><input type="checkbox" id="thAnn" checked /> Announce in the server</label>
       </div>
 
       <div class="tool">
         <h3>⏱️ Clear cooldown</h3>
         <div class="row">
-          <input id="cdKey" type="text" class="grow" value="all" placeholder="genie, dash, daily… or all" />
+          <label class="fld grow"><span>Cooldown key</span>
+            <input id="cdKey" type="text" value="all" placeholder="genie, dash, daily… or all" /></label>
           <button class="btn" id="cdGo">Clear</button>
         </div>
       </div>
@@ -182,21 +197,28 @@ function renderDetail() {
 
   const v = (id) => $("#" + id).value.trim();
   const n = (id) => Number($("#" + id).value || 0);
+  const ann = (id) => $("#" + id).checked;      // announce publicly in Discord?
   $("#rfGo").onclick = () => v("rfItem")
-    ? queueAction("refund", { item_id: v("rfItem"), qty: n("rfQty") || 1, coins: n("rfCoins") },
+    ? queueAction("refund", { item_id: v("rfItem"), qty: n("rfQty") || 1,
+                              coins: n("rfCoins"), announce: ann("rfAnn") },
                   `refund ${v("rfItem")}`)
     : toast("Pick an item first", true);
   $("#giGive").onclick = () => v("giItem")
-    ? queueAction("give", { item_id: v("giItem"), qty: n("giQty") || 1 }, `give ${v("giItem")}`)
+    ? queueAction("give", { item_id: v("giItem"), qty: n("giQty") || 1, announce: ann("giAnn") },
+                  `give ${v("giItem")}`)
     : toast("Pick an item first", true);
   $("#giTake").onclick = () => v("giItem")
-    ? queueAction("take", { item_id: v("giItem"), qty: n("giQty") || 1 }, `take ${v("giItem")}`)
+    ? queueAction("take", { item_id: v("giItem"), qty: n("giQty") || 1, announce: ann("giAnn") },
+                  `take ${v("giItem")}`)
     : toast("Pick an item first", true);
   $("#cGo").onclick = () => n("cAmt")
-    ? queueAction("coins", { kind: v("cKind"), amount: n("cAmt") }, `${v("cKind")} ${n("cAmt")}`)
+    ? queueAction("coins", { kind: v("cKind"), amount: n("cAmt"), announce: ann("cAnn") },
+                  `${v("cKind")} ${n("cAmt")}`)
     : toast("Enter a non-zero amount", true);
-  $("#thGrant").onclick = () => queueAction("theme", { theme: v("thKey") }, `grant ${v("thKey")}`);
-  $("#thRevoke").onclick = () => queueAction("theme", { theme: v("thKey"), revoke: true },
+  $("#thGrant").onclick = () => queueAction("theme", { theme: v("thKey"), announce: ann("thAnn") },
+                                            `grant ${v("thKey")}`);
+  $("#thRevoke").onclick = () => queueAction("theme", { theme: v("thKey"), revoke: true,
+                                                        announce: ann("thAnn") },
                                              `revoke ${v("thKey")}`);
   $("#cdGo").onclick = () => queueAction("cooldown", { key: v("cdKey") || "all" },
                                          `clear ${v("cdKey") || "all"}`);
