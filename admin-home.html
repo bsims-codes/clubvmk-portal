@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CLUBVMK · Admin</title>
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/styles.css" />
+<style>
+  .aw { max-width: 1000px; margin: 0 auto; padding: 24px 18px 90px; position: relative; z-index: 1; }
+  .ahead { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 4px; flex-wrap: wrap; }
+  .ahead h1 { font-family: "Fraunces", serif; font-size: 32px; margin: 0; }
+  .navlinks a { color: var(--muted); text-decoration: none; margin-left: 14px; font-size: 14px; }
+  .navlinks a:hover { color: var(--gold); }
+  .gate { text-align: center; padding: 80px 20px; }
+  .subtle { color: var(--faint); font-size: 13.5px; margin: 0 0 22px; }
+  .btn { padding: 8px 14px; border-radius: 9px; border: 1px solid var(--line); background: transparent; color: #cdd; font: inherit; font-weight: 600; cursor: pointer; }
+  .btn.gold { background: var(--gold); color: #201800; border: none; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+  a.tile { display: block; text-decoration: none; color: inherit; background: #12162a;
+           border: 1px solid var(--line); border-radius: 14px; padding: 20px;
+           transition: .15s; }
+  a.tile:hover { transform: translateY(-3px); border-color: var(--gold); }
+  .tile .ico { font-size: 26px; }
+  .tile h2 { font-family: "Fraunces", serif; font-size: 19px; margin: 10px 0 6px; }
+  .tile p { color: var(--faint); font-size: 13px; margin: 0; line-height: 1.5; }
+  .tile .tag { display: inline-block; margin-top: 12px; font-size: 11.5px; color: var(--muted);
+               border: 1px solid var(--line); border-radius: 99px; padding: 2px 9px; }
+
+  .status { margin-top: 30px; }
+  .status h2 { font-family: "Fraunces", serif; font-size: 18px; margin: 0 0 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid var(--line); }
+  th { color: var(--faint); font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 8px; font-size: 11px; font-weight: 600; }
+  .s-done { background: #123a20; color: #84e0a0; }
+  .s-pending { background: #5a3a00; color: #ffcf6a; }
+  .s-error { background: #4a1420; color: #ff9aa8; }
+  .muted2 { color: var(--faint); }
+</style>
+</head>
+<body>
+<div class="stars" aria-hidden="true"></div>
+<div class="aurora" aria-hidden="true"></div>
+
+<main class="aw">
+  <div id="gate" class="gate">
+    <h1>🛠️ Admin</h1>
+    <p class="muted" id="gateMsg">Sign in with Discord to continue.</p>
+    <button id="signInBtn" class="btn gold" style="margin-top:14px">Sign in with Discord</button>
+  </div>
+
+  <div id="panel" style="display:none">
+    <div class="ahead">
+      <h1>🛠️ Admin</h1>
+      <div class="navlinks"><a href="./">← Collector's Vault</a><a id="signOutBtn" href="#">Sign out</a></div>
+    </div>
+    <p class="subtle">Everything that manages the game, in one place.</p>
+
+    <div class="tiles">
+      <a class="tile" href="players.html">
+        <div class="ico">👥</div>
+        <h2>Players</h2>
+        <p>Look up any player, adjust items and coins, refund a purchase, grant a theme or clear a stuck cooldown.</p>
+        <span class="tag">items · coins · refunds</span>
+      </a>
+      <a class="tile" href="analytics.html">
+        <div class="ico">📊</div>
+        <h2>Analytics</h2>
+        <p>Collection coverage, per-player rarity breakdowns, wallets, theme ownership and per-item ownership charts.</p>
+        <span class="tag">read-only</span>
+      </a>
+      <a class="tile" href="admin.html">
+        <div class="ico">🎨</div>
+        <h2>Theme Admin</h2>
+        <p>Create and edit profile themes, upload backgrounds, set unlock costs, and grant themes to players.</p>
+        <span class="tag">live in ~2 min</span>
+      </a>
+    </div>
+
+    <section class="status">
+      <h2>Recent admin actions</h2>
+      <p class="subtle">Queued from this portal and applied by the bot within a few seconds.</p>
+      <table id="queueTbl"><thead><tr>
+        <th>When</th><th>Action</th><th>Player</th><th>Result</th><th>Status</th>
+      </tr></thead><tbody><tr><td colspan="5" class="muted2">Loading…</td></tr></tbody></table>
+    </section>
+  </div>
+</main>
+
+<div id="toast" class="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/admin-home.js"></script>
+</body>
+</html>

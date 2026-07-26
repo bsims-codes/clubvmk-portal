@@ -1,0 +1,76 @@
+/* ============================================================
+   CLUBVMK — Admin home: hub tiles + the recent action queue
+   ============================================================ */
+const CFG = window.CLUBVMK;
+const sb = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY);
+const ADMIN_IDS = ["886570059974201405"];
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function discordIdFromSession(session) {
+  const u = session?.user;
+  if (!u) return null;
+  const m = u.user_metadata || {};
+  const ident = (u.identities || []).find((i) => i.provider === "discord") || {};
+  return m.provider_id || m.sub || ident.id || ident.identity_data?.provider_id || null;
+}
+
+async function render(session) {
+  const id = discordIdFromSession(session);
+  const isAdmin = id && ADMIN_IDS.includes(String(id));
+  if (!session) {
+    $("#gate").style.display = ""; $("#panel").style.display = "none";
+    $("#gateMsg").textContent = "Sign in with Discord to continue.";
+    return;
+  }
+  if (!isAdmin) {
+    $("#gate").style.display = ""; $("#panel").style.display = "none";
+    $("#signInBtn").style.display = "none";
+    $("#gateMsg").textContent = `This account isn't an admin. (${id || "no id"})`;
+    return;
+  }
+  $("#gate").style.display = "none"; $("#panel").style.display = "";
+  loadQueue();
+}
+
+async function loadQueue() {
+  const tb = $("#queueTbl").querySelector("tbody");
+  const { data, error } = await sb.from("admin_actions")
+    .select("action,discord_id,guild_id,payload,status,result,created_at")
+    .order("created_at", { ascending: false }).limit(20);
+  if (error) {
+    tb.innerHTML = `<tr><td colspan="5" class="muted2">Queue unavailable — run
+      <code>webportal/schema_admin_actions.sql</code> in Supabase.</td></tr>`;
+    return;
+  }
+  if (!data.length) {
+    tb.innerHTML = `<tr><td colspan="5" class="muted2">Nothing yet.</td></tr>`;
+    return;
+  }
+  tb.innerHTML = data.map((r) => {
+    const when = new Date(r.created_at).toLocaleString();
+    const detail = Object.entries(r.payload || {})
+      .map(([k, v]) => `${k}=${v}`).join(" ");
+    return `<tr>
+      <td class="muted2">${esc(when)}</td>
+      <td><b>${esc(r.action)}</b> <span class="muted2">${esc(detail)}</span></td>
+      <td class="muted2">${esc(r.discord_id)}</td>
+      <td class="muted2">${esc(r.result || "—")}</td>
+      <td><span class="pill s-${esc(r.status)}">${esc(r.status)}</span></td>
+    </tr>`;
+  }).join("");
+}
+
+async function boot() {
+  $("#signInBtn").onclick = () => sb.auth.signInWithOAuth({
+    provider: "discord",
+    options: { redirectTo: location.href.split("#")[0], scopes: "identify" },
+  });
+  $("#signOutBtn").onclick = async (e) => { e.preventDefault(); await sb.auth.signOut(); location.reload(); };
+  sb.auth.onAuthStateChange((_e, s) => render(s));
+  const { data } = await sb.auth.getSession();
+  render(data.session);
+  setInterval(() => { if ($("#panel").style.display !== "none") loadQueue(); }, 8000);
+}
+boot();
