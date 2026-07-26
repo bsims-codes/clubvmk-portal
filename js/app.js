@@ -8,6 +8,11 @@ const FEATURED_MAX = 8;        // how many items a showcase can hold (keep in sy
 const FEATURED_PER_ROW = 4;    // slots per row, matching the rendered card's grid
 const $ = (s) => document.querySelector(s);
 
+// Combined Magics carry a "*<stars>" suffix; everything about them (rarity,
+// artwork family) derives from the base pin.
+const baseItemId = (id) => (id.includes("*") ? id.slice(0, id.lastIndexOf("*")) : id);
+const itemStars = (id) => (id.includes("*") ? Number(id.slice(id.lastIndexOf("*") + 1)) || 1 : 1);
+
 // How many copies of an item the player holds. An item may take more than one
 // showcase slot, but never more slots than they own copies.
 const ownedCount = (id) => S.inv.find((r) => r.item_id === id)?.count || 0;
@@ -101,7 +106,9 @@ async function applyRarityOverrides() {
       if (!data || data.length < page) break;
       from += page;
     }
-    for (const id in S.catalog) S.catalog[id].r = map[id] || "common";
+    // A combined Magic ("pin:3703*5") inherits its base pin's rarity — the
+    // overrides table only ever lists base ids.
+    for (const id in S.catalog) S.catalog[id].r = map[baseItemId(id)] || "common";
   } catch (e) { console.warn("overrides load failed — keeping baked rarities as fallback:", e.message); }
 }
 

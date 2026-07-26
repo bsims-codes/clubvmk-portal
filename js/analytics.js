@@ -58,8 +58,13 @@ async function loadCatalog() {
     }
     // 'remove' and 'hold' are BOTH out of the game (bot.py skips each when
     // building the spawn pool), so neither belongs in the catalogue totals.
-    D.held = 0;
-    for (const id in D.catalog) D.catalog[id].r = "common";
+    D.held = 0; D.crafted = 0;
+    // Combined Magics ("pin:3703*5") are crafted, never spawned, so they don't
+    // belong in catalogue coverage — but they do inherit the base pin's rarity.
+    for (const id in D.catalog) {
+      if (id.includes("*")) { delete D.catalog[id]; D.crafted++; continue; }
+      D.catalog[id].r = "common";
+    }
     for (const id in map) {
       if (!D.catalog[id]) continue;
       if (map[id] === "remove") { delete D.catalog[id]; D.removed++; }
