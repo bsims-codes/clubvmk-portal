@@ -238,7 +238,13 @@ function wireEditor() {
   const col = $("#colorInput");
   col.value = S.draft.accent_color || rgbHex(S.themes[S.draft.theme]?.accent || [61, 139, 253]);
   col.oninput = () => { S.draft.accent_color = col.value; touch(); renderPreview(); };
-  $("#colorReset").onclick = () => { S.draft.accent_color = null; touch(); renderAll(); };
+  $("#colorReset").onclick = () => {
+    S.draft.accent_color = null;
+    // snap the swatch back to the theme's own accent, otherwise it keeps showing
+    // the cleared colour and the button looks like it did nothing
+    col.value = rgbHex(S.themes[S.draft.theme]?.accent || [61, 139, 253]);
+    touch(); renderAll();
+  };
   $("#saveBtn").onclick = save;
   $("#renderBtn").onclick = () => doRender(false);
   $("#invSearch").oninput = (e) => { S.invSearch = e.target.value.toLowerCase(); S.invPage = 0; renderInv(); };
