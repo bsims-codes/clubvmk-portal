@@ -37,8 +37,17 @@ async function queueAction(action, payload, label) {
   });
   if (error) return toast("Failed: " + error.message, true);
   toast(`Queued: ${label}`);
-  // give the bot a moment, then refresh what we show
-  setTimeout(() => selectPlayer(P.sel, true), 2500);
+  // give the bot a moment, then refresh — the list carries the wallet, so it has
+  // to be reloaded too or a coin change still shows the old balance
+  setTimeout(refreshSelected, 2500);
+}
+
+async function refreshSelected() {
+  const key = P.sel && `${P.sel.discord_id}|${P.sel.guild_id}`;
+  await loadPlayers();
+  if (!key) return;
+  const fresh = P.players.find((p) => `${p.discord_id}|${p.guild_id}` === key);
+  if (fresh) await selectPlayer(fresh);
 }
 
 /* ---------- data ---------- */
@@ -82,7 +91,7 @@ function renderList() {
     const on = P.sel && P.sel.discord_id === p.discord_id && P.sel.guild_id === p.guild_id;
     return `<div class="prow${on ? " on" : ""}" data-i="${i}">
       <span>${esc(p.display_name || p.discord_id)}<br><small>${esc(p.guild_name || p.guild_id)}</small></span>
-      <small>${num(p.items)} items</small></div>`;
+      <small>${num(p.items)} items<br>🪙${num(p.club_coins)} ❄️${num(p.yeti_credits)}</small></div>`;
   }).join("") || `<p class="muted2">No players found.</p>`;
   $("#plist").querySelectorAll(".prow").forEach((el) => {
     el.onclick = () => selectPlayer(rows[+el.dataset.i]);
@@ -166,6 +175,8 @@ function renderDetail() {
       <span class="muted2">${esc(p.guild_name || p.guild_id)}</span>
       <span class="muted2">· id ${esc(p.discord_id)}</span></div>
     <div class="stats">
+      <div class="stat wallet"><div class="v">${num(p.club_coins)}</div><div class="k">🪙 Club Coins</div></div>
+      <div class="stat wallet"><div class="v">${num(p.yeti_credits)}</div><div class="k">❄️ Yeti Credits</div></div>
       <div class="stat"><div class="v">${num(total)}</div><div class="k">Copies</div></div>
       <div class="stat"><div class="v">${num(P.inv.length)}</div><div class="k">Unique</div></div>
       ${RARITY.map((r) => `<div class="stat"><div class="v">${num(byTier[r] || 0)}</div>

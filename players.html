@@ -42,6 +42,10 @@
   .stat { background: #0e1226; border: 1px solid var(--line); border-radius: 11px; padding: 10px 12px; }
   .stat .v { font-family: "Fraunces", serif; font-size: 20px; font-weight: 700; }
   .stat .k { font-size: 11px; color: var(--faint); text-transform: uppercase; letter-spacing: .04em; }
+  /* wallet tiles lead the row — they're what you check before a refund */
+  .stat.wallet { border-color: rgba(240,178,60,.45); background: #171532; }
+  .stat.wallet .v { color: var(--gold-soft, #ffd27a); }
+  .prow small { text-align: right; line-height: 1.5; }
 
   .tools { display: grid; gap: 14px; margin-top: 16px; }
   .tool { border: 1px solid var(--line); border-radius: 12px; padding: 13px 14px; background: #0e1226; }
