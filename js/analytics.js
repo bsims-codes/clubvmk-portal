@@ -108,9 +108,11 @@ async function loadAll() {
   D.themeOwners = to.data || [];
   D.itemStats = is.data || [];
   // Optional — present only once the newer schema_analytics.sql has been run.
+  // analytics_players only gained the wallet columns in that same file, so its
+  // absence is detected off a returned row rather than a separate probe.
   D.hasRarity = !pr.error;
+  D.hasCoins = D.players.some((p) => p.club_coins !== undefined);
   D.playerRarity = pr.data || [];
-  if (pr.error) toast("Rarity/wallet columns need the updated schema_analytics.sql", true);
   // fold the per-player rarity rows onto each player row: p.rar.legendary etc.
   const byPlayer = {};
   for (const r of D.playerRarity) (byPlayer[r.discord_id] ||= {})[r.tier] = Number(r.distinct_items || 0);
@@ -249,8 +251,11 @@ function renderPlayers() {
   const s = D.playerSort;
   rows.sort((a, b) => { const av = playerVal(a, s.k), bv = playerVal(b, s.k); return (av < bv ? -1 : av > bv ? 1 : 0) * s.dir; });
   $("#playerTotal").textContent = `${rows.length} players`;
+  // A dash means "not available", never 0 — showing 0 would read as a real count.
+  const NA = `<span class="muted2" title="Run webportal/schema_analytics.sql in Supabase">—</span>`;
   const cells = (p) => {
-    const rar = RARITY.map((r) => `<td class="num r-${r}">${num(p.rar?.[r] || 0)}</td>`).join("");
+    const rar = RARITY.map((r) =>
+      `<td class="num r-${r}">${D.hasRarity ? num(p.rar?.[r] || 0) : NA}</td>`).join("");
     const dupes = Number(p.total_copies || 0) - Number(p.distinct_items || 0);
     const pct = ((Number(p.distinct_items || 0) / catN) * 100).toFixed(1);
     return `<td>${esc(p.name)}</td>` +
@@ -259,10 +264,15 @@ function renderPlayers() {
       rar +
       `<td class="num">${num(p.total_copies)}</td>` +
       `<td class="num">${num(dupes)}</td>` +
-      `<td class="num">${num(p.club_coins || 0)}</td>` +
-      `<td class="num">${num(p.yeti_credits || 0)}</td>` +
+      `<td class="num">${D.hasCoins ? num(p.club_coins || 0) : NA}</td>` +
+      `<td class="num">${D.hasCoins ? num(p.yeti_credits || 0) : NA}</td>` +
       `<td class="num">${num(p.themes)}</td>`;
   };
+  const missing = [!D.hasRarity && "rarity breakdown", !D.hasCoins && "wallets"].filter(Boolean);
+  $("#playerNote").innerHTML = missing.length
+    ? `⚠️ ${missing.join(" and ")} unavailable — run <code>webportal/schema_analytics.sql</code> ` +
+      `in Supabase → SQL Editor, then refresh.`
+    : "";
   $("#playerTbl").querySelector("tbody").innerHTML =
     rows.map((p) => `<tr>${cells(p)}</tr>`).join("")
     || `<tr><td colspan="12" class="muted2">No players yet.</td></tr>`;

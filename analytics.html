@@ -58,6 +58,9 @@
   #playerTbl td:first-child{white-space:nowrap}
   .owners { color: var(--muted); font-size: 13px; }
   .muted2 { color: var(--faint); }
+  .warn:empty { display: none; }
+  .warn { color: var(--gold-soft, #ffd27a); }
+  .warn code { background: #1a1f38; padding: 1px 6px; border-radius: 5px; font-size: 12px; }
   a.link { color: var(--gold); cursor: pointer; }
 </style>
 </head>
@@ -132,6 +135,7 @@
     <section class="blk">
       <h2 class="sec">👤 Players</h2>
       <p class="subtle">Collection size, rarity breakdown, wallet and themes owned. Click any column to sort.</p>
+      <p class="subtle warn" id="playerNote"></p>
       <div class="toolbar"><input id="playerSearch" type="text" placeholder="Find a player…" /><span class="muted2" id="playerTotal"></span></div>
       <div class="tablewrap"><table id="playerTbl"><thead><tr>
         <th data-k="display_name">Player</th>
