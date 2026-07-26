@@ -36,6 +36,19 @@
   .tablewrap { max-height: 440px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; }
   .pill { display: inline-block; padding: 1px 8px; border-radius: 8px; font-size: 11px; font-weight: 600; }
   .r-legendary{background:#5a3a00;color:#ffcf6a}.r-epic{background:#3a1f5e;color:#d6a6ff}.r-rare{background:#0f2c5e;color:#8fb6ff}.r-uncommon{background:#123a20;color:#84e0a0}.r-common{background:#2a2f47;color:#c4cbe6}
+  /* ---- owner bar chart: single series, magnitude by length ---- */
+  .chartwrap { max-height: 460px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; }
+  .obar { display: grid; grid-template-columns: minmax(110px, 230px) 1fr 46px; gap: 12px;
+          align-items: center; padding: 3px 4px; border-radius: 6px; }
+  .obar:hover { background: rgba(150,165,230,.07); }
+  .obar-name { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .obar-track { height: 14px; background: rgba(150,165,230,.07); border-radius: 4px; }
+  /* square at the baseline, 4px rounded data-end */
+  .obar-fill { display: block; height: 100%; border-radius: 0 4px 4px 0; min-width: 0; }
+  .obar-val { font-size: 12.5px; text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .obar.zero .obar-val { color: var(--faint); }
+  .chk { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; }
+  .chartnote { font-size: 12px; color: var(--faint); margin: 8px 2px 0; }
   /* rarity-tinted numeric columns: text only, so they don't read as filled chips */
   th.r-legendary,td.r-legendary{background:none;color:var(--leg)}
   th.r-epic,td.r-epic{background:none;color:var(--epic)}
@@ -97,6 +110,23 @@
         <th class="num">Copies owned</th>
         <th class="num" title="Items only one player owns">Sole owner</th>
       </tr></thead><tbody></tbody></table></div>
+    </section>
+
+    <section class="blk">
+      <h2 class="sec">🏆 Who owns each item</h2>
+      <p class="subtle" id="ownChartSub">How many players hold each item, rarest tier first.</p>
+      <div class="toolbar">
+        <select id="ownTier">
+          <option value="legendary">Legendary</option>
+          <option value="epic">Epic</option>
+          <option value="rare">Rare</option>
+          <option value="uncommon">Uncommon</option>
+          <option value="common">Common</option>
+        </select>
+        <label class="chk"><input type="checkbox" id="ownHideZero" /> Hide never-collected</label>
+        <span class="muted2" id="ownTotal"></span>
+      </div>
+      <div class="chartwrap" id="ownChart"></div>
     </section>
 
     <section class="blk">

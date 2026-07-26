@@ -111,7 +111,7 @@ async function loadAll() {
   for (const r of D.playerRarity) (byPlayer[r.discord_id] ||= {})[r.tier] = Number(r.distinct_items || 0);
   for (const p of D.players) p.rar = byPlayer[p.discord_id] || {};
   renderCards();
-  renderThemes(); renderRarity(); renderPlayers(); renderItems();
+  renderThemes(); renderRarity(); renderOwnerChart(); renderPlayers(); renderItems();
 }
 
 /* ---------- overview ---------- */
@@ -190,6 +190,42 @@ function renderRarity() {
       `<td class="num">${num(a.cat - a.got)}</td><td class="num">${num(a.copies)}</td>` +
       `<td class="num">${num(a.sole)}</td></tr>`;
   }).join("");
+}
+
+/* ---------- owner bar chart ----------
+   One series (the chosen rarity), so length carries magnitude and a single hue
+   carries identity — no legend needed, the heading names it. */
+const TIER_HUE = { legendary: "#f0a13c", epic: "#a45cf0", rare: "#3d8bfd",
+                   uncommon: "#4caf7d", common: "#8a93b8" };
+
+function renderOwnerChart() {
+  const tier = $("#ownTier").value;
+  const hideZero = $("#ownHideZero").checked;
+  const stats = {}; for (const r of D.itemStats) stats[r.item_id] = r;
+  let rows = Object.values(D.catalog).filter((it) => it.r === tier).map((it) => {
+    const s = stats[it.id];
+    return { id: it.id, name: it.n,
+             owners: Number(s?.owners || 0), copies: Number(s?.copies || 0) };
+  });
+  const total = rows.length;
+  const never = rows.filter((r) => !r.owners).length;
+  if (hideZero) rows = rows.filter((r) => r.owners > 0);
+  rows.sort((a, b) => b.owners - a.owners || a.name.localeCompare(b.name));
+
+  const max = Math.max(1, ...rows.map((r) => r.owners));
+  const hue = TIER_HUE[tier] || "var(--gold)";
+  $("#ownTotal").textContent =
+    `${num(total - never)} of ${num(total)} collected · ${num(never)} owned by nobody`;
+  $("#ownChart").innerHTML = rows.map((r) => {
+    const pct = (r.owners / max) * 100;
+    const tip = `${r.name} — ${r.owners} owner${r.owners === 1 ? "" : "s"}, ` +
+                `${r.copies} cop${r.copies === 1 ? "y" : "ies"} in circulation`;
+    return `<div class="obar${r.owners ? "" : " zero"}" title="${esc(tip)}">
+      <span class="obar-name">${esc(r.name)}</span>
+      <span class="obar-track"><span class="obar-fill" style="width:${pct.toFixed(2)}%;background:${hue}"></span></span>
+      <span class="obar-val">${num(r.owners)}</span>
+    </div>`;
+  }).join("") || `<p class="muted2">No ${esc(tier)} items to show.</p>`;
 }
 
 /* ---------- players ---------- */
@@ -292,6 +328,8 @@ async function boot() {
   $("#refreshBtn").onclick = (e) => { e.preventDefault(); loadAll(); };
   $("#themeSearch").oninput = renderThemes;
   $("#playerSearch").oninput = renderPlayers;
+  $("#ownTier").onchange = renderOwnerChart;
+  $("#ownHideZero").onchange = renderOwnerChart;
   $("#itemMode").onchange = renderItems;
   $("#rarityFilter").onchange = renderItems;
   $("#itemSearch").oninput = renderItems;
