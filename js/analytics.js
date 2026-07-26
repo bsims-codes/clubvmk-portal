@@ -42,7 +42,7 @@ async function render(session) {
 /* ---------- data ---------- */
 async function loadCatalog() {
   if (Object.keys(D.catalog).length) return;
-  const cat = await fetch("data/catalog.min.json").then((r) => r.json());
+  const cat = await fetch("data/catalog.min.json", { cache: "no-cache" }).then((r) => r.json());
   for (const it of cat) D.catalog[it.id] = { id: it.id, n: it.n, r: it.r, c: it.c };
   // The overrides table is the SINGLE source of truth: default everything to common,
   // apply the table, and drop items the curator marked "remove" (as the bot does).

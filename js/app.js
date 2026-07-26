@@ -11,6 +11,14 @@ const $ = (s) => document.querySelector(s);
 // Combined Magics carry a "*<stars>" suffix; everything about them (rarity,
 // artwork family) derives from the base pin.
 const baseItemId = (id) => (id.includes("*") ? id.slice(0, id.lastIndexOf("*")) : id);
+
+// Stand-in for an item the catalogue doesn't know (stale cache, brand-new item).
+// Falls back to the base pin's art where it can, so combined Magics still look right.
+function unknownItem(id) {
+  const base = S.catalog[baseItemId(id)];
+  return { n: base ? base.n : id, r: base ? base.r : "common",
+           c: base ? base.c : "pin", img: base ? base.img : "" };
+}
 const itemStars = (id) => (id.includes("*") ? Number(id.slice(id.lastIndexOf("*") + 1)) || 1 : 1);
 
 // How many copies of an item the player holds. An item may take more than one
@@ -72,7 +80,10 @@ async function loadThemes() {
 /* ---------- boot ---------- */
 async function boot() {
   const [cat, thm, ttl] = await Promise.all([
-    fetch("data/catalog.min.json").then((r) => r.json()),
+    // no-cache = revalidate with the server (cheap, ETag). Without it a browser
+    // holding an older catalogue silently hides any newly-added item — combined
+    // Magics vanished from inventories this way.
+    fetch("data/catalog.min.json", { cache: "no-cache" }).then((r) => r.json()),
     loadThemes(),
     fetch("data/titles.json").then((r) => r.json()).catch(() => ({ levels: {}, totals: [] })),
   ]);
@@ -381,8 +392,9 @@ function renderRarityFilter() {
 
 function filteredInv() {
   const list = S.inv
-    .map((r) => ({ ...r, it: S.catalog[r.item_id] }))
-    .filter((r) => r.it)
+    // An item missing from the catalogue still belongs to the player — show a
+    // placeholder rather than dropping it, so nothing ever silently disappears.
+    .map((r) => ({ ...r, it: S.catalog[r.item_id] || unknownItem(r.item_id) }))
     .filter((r) => S.invRarity === "all" || r.it.r === S.invRarity)
     .filter((r) => S.invCat === "all" || r.it.c === S.invCat)
     .filter((r) => !S.invSearch || r.it.n.toLowerCase().includes(S.invSearch));
