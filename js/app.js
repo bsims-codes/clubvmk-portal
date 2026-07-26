@@ -303,7 +303,6 @@ function renderThemes() {
 function renderFeatured() {
   const row = $("#featuredRow"); row.innerHTML = "";
   row.style.setProperty("--feat-cols", FEATURED_PER_ROW);   // wrap like the rendered card
-  const note = $("#featMaxNote"); if (note) note.textContent = `up to ${FEATURED_MAX}`;
   for (let i = 0; i < FEATURED_MAX; i++) {
     const id = S.draft.featured[i];
     const it = id && S.catalog[id];
@@ -319,8 +318,12 @@ function renderFeatured() {
       slot.ondragstart = (e) => {
         e.dataTransfer.setData("text/plain", "feat:" + i);
         e.dataTransfer.effectAllowed = "move"; slot.classList.add("dragging");
+        document.body.classList.add("dragging-item");
       };
-      slot.ondragend = () => slot.classList.remove("dragging");
+      slot.ondragend = () => {
+        slot.classList.remove("dragging");
+        document.body.classList.remove("dragging-item");
+      };
     } else {
       slot.innerHTML = `<span class="plus">+</span>`;
     }
@@ -334,6 +337,11 @@ function renderFeatured() {
     };
     row.appendChild(slot);
   }
+  const used = S.draft.featured.filter(Boolean).length;
+  const note = $("#featMaxNote");
+  if (note) note.textContent = `${used} of ${FEATURED_MAX}`;
+  const fill = $("#featFill");
+  if (fill) fill.style.width = `${Math.round((used / FEATURED_MAX) * 100)}%`;
 }
 
 function dropInvOnSlot(i, itemId) {
@@ -413,7 +421,9 @@ function renderInv() {
     el.ondragstart = (e) => {
       e.dataTransfer.setData("text/plain", "inv:" + el.dataset.id);
       e.dataTransfer.effectAllowed = "copy";
+      document.body.classList.add("dragging-item");   // lights up the showcase rail
     };
+    el.ondragend = () => document.body.classList.remove("dragging-item");
     el.onclick = () => toggleFeature(el.dataset.id);
     el.oncontextmenu = (e) => { e.preventDefault(); showItemMenu(e.clientX, e.clientY, el.dataset.id); };
   });

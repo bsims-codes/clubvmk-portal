@@ -55,67 +55,90 @@
 
   <div class="app-grid">
     <!-- LEFT: live preview + save -->
-    <section class="panel preview-panel">
-      <div class="panel-head"><h2>Preview</h2><span id="saveState" class="save-state"></span></div>
-      <div id="cardPreview" class="card-preview"><div class="empty">Sign in to load your card…</div></div>
-      <div class="preview-actions">
-        <button id="renderBtn" class="btn ghost" title="Render the exact /profile card via the bot">⟳ Render exact card</button>
-        <button id="saveBtn" class="btn gold">Save changes</button>
+    <details class="panel preview-panel" open>
+      <summary class="panel-head"><h2>Preview</h2><span id="saveState" class="save-state"></span></summary>
+      <div class="panel-body">
+        <div id="cardPreview" class="card-preview"><div class="empty">Sign in to load your card…</div></div>
+        <div class="preview-actions">
+          <button id="renderBtn" class="btn ghost" title="Render the exact /profile card via the bot">⟳ Render exact card</button>
+          <button id="saveBtn" class="btn gold">Save changes</button>
+        </div>
+        <p class="hint">Live preview is an approximation — “Render exact card” asks the bot for the real image.</p>
       </div>
-      <p class="hint">Live preview is an approximation — “Render exact card” asks the bot for the real image.</p>
-    </section>
+    </details>
 
-    <!-- RIGHT: editor + inventory -->
+    <!-- RIGHT: card settings. Collapsed by default — these are set-once-and-forget,
+         so the showcase and inventory below get the vertical room instead. -->
     <section class="stack">
-      <div class="panel">
-        <div class="panel-head"><h2>Identity</h2></div>
-        <label class="field"><span>Bio</span>
-          <input id="bioInput" maxlength="80" placeholder="A short tagline (80 chars)…" />
-        </label>
-        <label class="field"><span>Accent colour</span>
-          <span class="color-row">
-            <input id="colorInput" type="color" />
-            <button id="colorReset" class="btn tiny ghost">Use theme default</button>
-          </span>
-        </label>
-      </div>
-
-      <div class="panel">
-        <div class="panel-head"><h2>Theme &amp; background</h2><span id="themeCount" class="muted"></span></div>
-        <div id="themeGrid" class="theme-grid"></div>
-      </div>
-
-      <div class="panel" id="titlesPanel" style="display:none">
-        <div class="panel-head"><h2>Level titles</h2><span id="titlesNote" class="muted"></span></div>
-        <div id="titlesBox" class="titles-box"></div>
-        <p class="hint">Toggle which earned titles show on your card. The card displays up to 4.</p>
-      </div>
-
-      <div class="panel">
-        <div class="panel-head"><h2>Featured showcase</h2><span id="featMaxNote" class="muted">up to 8</span></div>
-        <div id="featuredRow" class="featured-row"></div>
-        <p class="hint">Drag an item from your inventory onto a slot to place it there, or drag slots to reorder. Click ✕ to remove. (Click an item also adds it to the next open slot.) Own more than one of an item? You can fill several slots with it — up to the number of copies you hold.</p>
-      </div>
-
-      <div class="panel">
-        <div class="panel-head"><h2>Inventory</h2><span id="invCount" class="muted"></span></div>
-        <div class="inv-controls">
-          <input id="invSearch" class="search" placeholder="Search items…" />
-          <select id="invSort" class="mini-select" title="Sort">
-            <option value="rarity_desc">Rarity: high → low</option>
-            <option value="rarity_asc">Rarity: low → high</option>
-            <option value="az">Name: A → Z</option>
-            <option value="za">Name: Z → A</option>
-          </select>
+      <details class="panel">
+        <summary class="panel-head"><h2>Identity</h2></summary>
+        <div class="panel-body">
+          <label class="field"><span>Bio</span>
+            <input id="bioInput" maxlength="80" placeholder="A short tagline (80 chars)…" />
+          </label>
+          <label class="field"><span>Accent colour</span>
+            <span class="color-row">
+              <input id="colorInput" type="color" />
+              <button id="colorReset" class="btn tiny ghost">Use theme default</button>
+            </span>
+          </label>
         </div>
-        <div class="inv-controls">
-          <div id="typeFilter" class="rarity-filter"></div>
-          <div id="rarityFilter" class="rarity-filter"></div>
+      </details>
+
+      <details class="panel">
+        <summary class="panel-head"><h2>Theme &amp; background</h2><span id="themeCount" class="muted"></span></summary>
+        <div class="panel-body"><div id="themeGrid" class="theme-grid"></div></div>
+      </details>
+
+      <details class="panel" id="titlesPanel" style="display:none">
+        <summary class="panel-head"><h2>Level titles</h2><span id="titlesNote" class="muted"></span></summary>
+        <div class="panel-body">
+          <div id="titlesBox" class="titles-box"></div>
+          <p class="hint">Toggle which earned titles show on your card. The card displays up to 4.</p>
         </div>
-        <div id="invGrid" class="inv-grid"></div>
-        <div id="invPager" class="pager"></div>
-      </div>
+      </details>
     </section>
+  </div>
+
+  <!-- Loadout workspace: showcase pinned beside the inventory so a drag never
+       needs a scroll. Slot rail left, item grid right. -->
+  <div class="loadout">
+    <details class="panel showcase-panel" open>
+      <summary class="panel-head">
+        <h2>Featured showcase</h2>
+        <span id="featMaxNote" class="muted">up to 8</span>
+      </summary>
+      <div class="panel-body">
+        <div id="featuredRow" class="featured-row"></div>
+        <div class="showcase-meter"><span id="featFill" class="showcase-meter-fill"></span></div>
+        <p class="hint showcase-hint">
+          Drag items across from your inventory, or drag slots to reorder.
+          Click <b>✕</b> to remove, or click any item to fill the next open slot.
+          Hold duplicates? Fill several slots with the same item, up to the number you own.
+        </p>
+      </div>
+    </details>
+
+    <details class="panel inventory-panel" open>
+      <summary class="panel-head"><h2>Inventory</h2><span id="invCount" class="muted"></span></summary>
+      <div class="panel-body">
+      <div class="inv-controls">
+        <input id="invSearch" class="search" placeholder="Search items…" />
+        <select id="invSort" class="mini-select" title="Sort">
+          <option value="rarity_desc">Rarity: high → low</option>
+          <option value="rarity_asc">Rarity: low → high</option>
+          <option value="az">Name: A → Z</option>
+          <option value="za">Name: Z → A</option>
+        </select>
+      </div>
+      <div class="inv-controls">
+        <div id="typeFilter" class="rarity-filter"></div>
+        <div id="rarityFilter" class="rarity-filter"></div>
+      </div>
+      <div id="invGrid" class="inv-grid"></div>
+      <div id="invPager" class="pager"></div>
+      </div>
+    </details>
   </div>
 </main>
 

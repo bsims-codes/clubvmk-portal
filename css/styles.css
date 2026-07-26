@@ -111,6 +111,27 @@ body{
   border-radius:var(--radius);padding:18px;box-shadow:var(--shadow)}
 .stack{display:flex;flex-direction:column;gap:22px}
 .panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+
+/* ── collapsible panels ─────────────────────────────────────────────────────
+   Native <details>/<summary>, so keyboard and screen-reader behaviour comes
+   for free. Card settings collapse; showcase and inventory stay open. */
+details.panel > .panel-head{cursor:pointer;margin-bottom:0;list-style:none;
+  user-select:none;padding-right:26px;position:relative;border-radius:6px}
+details.panel > .panel-head::-webkit-details-marker{display:none}
+details.panel > .panel-head::after{content:"";position:absolute;right:4px;top:50%;
+  width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);
+  transform:translateY(-70%) rotate(45deg);transition:transform .22s cubic-bezier(.4,0,.2,1)}
+details.panel[open] > .panel-head::after{transform:translateY(-20%) rotate(-135deg)}
+details.panel > .panel-head:hover h2{color:var(--gold-soft)}
+details.panel > .panel-head:hover::after{border-color:var(--gold-soft)}
+details.panel > .panel-head:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+details.panel[open] > .panel-head{margin-bottom:14px}
+.panel-body{animation:panelIn .2s cubic-bezier(.4,0,.2,1)}
+@keyframes panelIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){
+  .panel-body{animation:none}
+  details.panel > .panel-head::after{transition:none}
+}
 .panel-head h2{font-family:var(--font-d);font-weight:600;font-size:19px;margin:0}
 .muted{color:var(--muted);font-size:13px}
 .hint{color:var(--faint);font-size:12.5px;margin:12px 2px 2px;line-height:1.5}
@@ -185,6 +206,46 @@ body{
 .title-chip.on{background:var(--gold);color:#201800;border-color:var(--gold);font-weight:600}
 
 /* featured */
+/* ── loadout workspace ──────────────────────────────────────────────────────
+   Showcase and inventory sit side by side so dragging between them never
+   requires a scroll. The slot rail is sticky; the grid scrolls past it. */
+.loadout{display:grid;grid-template-columns:minmax(400px,480px) 1fr;gap:22px;
+  align-items:start;margin-top:22px}
+@media(max-width:1200px){.loadout{grid-template-columns:1fr}}
+
+/* Bigger slots than the inventory tiles — they are the drop targets, and the
+   showcase is what the whole page is for. */
+.showcase-panel .featured-row{gap:14px}
+.showcase-panel .fslot{aspect-ratio:1/1;border-radius:14px}
+.showcase-panel .fslot img{width:78%;height:78%}
+.showcase-panel .fslot span:not(.x):not(.plus){font-size:10.5px;bottom:5px}
+.showcase-panel .fslot .plus{font-size:32px}
+
+/* Once the rail drops below the inventory it spans the full width, and four
+   equal columns would blow the slots up to ~215px. Cap them instead. */
+@media(max-width:1200px){
+  .showcase-panel .featured-row{grid-template-columns:repeat(auto-fill,minmax(96px,132px));
+    justify-content:start}
+}
+
+.showcase-panel{position:sticky;top:90px;transition:border-color .18s,box-shadow .18s}
+@media(max-width:1100px){.showcase-panel{position:static}}
+
+/* While an item is in flight the whole rail lifts, so the target is obvious
+   from anywhere on the page. */
+body.dragging-item .showcase-panel{border-color:var(--gold);
+  box-shadow:0 0 0 1px rgba(240,178,60,.35),0 18px 44px -22px rgba(240,178,60,.5)}
+body.dragging-item .featured-row .fslot:not(.filled){border-color:var(--gold-soft);
+  background:rgba(240,178,60,.07)}
+
+.showcase-meter{height:4px;border-radius:99px;background:rgba(255,255,255,.07);
+  margin-top:14px;overflow:hidden}
+.showcase-meter-fill{display:block;height:100%;width:0;border-radius:99px;
+  background:linear-gradient(90deg,var(--gold-soft),var(--gold));transition:width .28s cubic-bezier(.4,0,.2,1)}
+.showcase-hint{margin-top:10px}
+
+.inventory-panel .inv-grid{grid-template-columns:repeat(auto-fill,minmax(112px,1fr))}
+
 .featured-row{display:grid;grid-template-columns:repeat(var(--feat-cols,4),1fr);gap:12px}
 .featured-row .fslot{aspect-ratio:1/.86;border-radius:12px;border:2px dashed var(--line);
   background:var(--bg);display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer;overflow:hidden}
