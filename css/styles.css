@@ -291,8 +291,10 @@ body.dragging-item .featured-row .fslot:not(.filled){border-color:var(--gold-sof
 .inv-item[data-r=uncommon]{border-top-color:var(--unc)}
 .inv-item img{width:100%;aspect-ratio:1;object-fit:contain}
 .inv-item .nm{font-size:11px;color:#cfd5ef;margin-top:5px;line-height:1.25;height:2.5em;overflow:hidden}
-.inv-item .ct{position:absolute;top:6px;right:7px;font-size:10.5px;background:rgba(0,0,0,.55);
-  border-radius:99px;padding:1px 7px;color:#fff}
+/* quantity is always shown; a duplicate stack is called out in gold */
+.inv-item .ct{position:absolute;top:6px;right:7px;font-size:10.5px;background:rgba(0,0,0,.5);
+  border-radius:99px;padding:1px 7px;color:#c8cfe8}
+.inv-item .ct.dup{background:var(--gold);color:#2a1e05;font-weight:700}
 .inv-item.featured{outline:2px solid var(--gold);outline-offset:-1px}
 .empty-inv{color:var(--faint);grid-column:1/-1;text-align:center;padding:30px 0}
 

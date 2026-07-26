@@ -393,6 +393,7 @@ function filteredInv() {
     rarity_asc: (a, b) => rIdx(b) - rIdx(a) || byName(a, b),
     az: byName,
     za: (a, b) => byName(b, a),
+    copies_desc: (a, b) => b.count - a.count || byName(a, b),
   };
   return list.sort(sorts[S.invSort] || sorts.rarity_desc);
 }
@@ -420,7 +421,7 @@ function renderInv() {
   grid.innerHTML = slice.map((r) => {
     const nfeat = featCount(r.item_id);
     return `<div class="inv-item${nfeat ? " featured" : ""}" data-r="${r.it.r}" data-id="${r.item_id}">
-      ${r.count > 1 ? `<span class="ct">${nfeat > 1 ? `★${nfeat} · ` : ""}×${r.count}</span>` : ""}
+      <span class="ct${r.count > 1 ? " dup" : ""}">${nfeat > 1 ? `★${nfeat} · ` : ""}×${r.count}</span>
       <img loading="lazy" src="${imgUrl(r.it.img)}" alt=""><div class="nm">${esc(r.it.n)}</div></div>`;
   }).join("");
   grid.querySelectorAll(".inv-item").forEach((el) => {
