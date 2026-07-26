@@ -50,6 +50,11 @@
   /* crop tool */
   .crop-vp { position: relative; width: 100%; aspect-ratio: 900/520; overflow: hidden; border-radius: 12px; border: 1px solid var(--line); background: #0a0d18; cursor: grab; touch-action: none; }
   .crop-vp.drag { cursor: grabbing; }
+  .gif-notice { margin-top: 10px; padding: 10px 12px; border-radius: 10px; font-size: 12.5px;
+    line-height: 1.5; color: #e8ecff; background: rgba(240,178,60,.09);
+    border: 1px solid rgba(240,178,60,.42); }
+  .gif-notice b { color: var(--gold, #f0b23c); }
+  .gif-warn { display: block; margin-top: 4px; color: #f0b23c; }
   .crop-vp img { position: absolute; top: 0; left: 0; transform-origin: 0 0; user-select: none; -webkit-user-drag: none; will-change: transform; }
   /* live preview card (approximates the rendered profile card) */
   .pv-label { font-size: 12px; color: var(--faint); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
@@ -126,9 +131,15 @@
           </div>
           <div class="fld" style="margin-top:12px">
             <label>Background image</label>
-            <div id="dropEmpty" class="drop">Click to upload a background image<br><span class="hint">JPG / PNG / WebP — colours auto-sample, and you can frame it below</span></div>
+            <div id="dropEmpty" class="drop">Click to upload a background image<br><span class="hint">JPG / PNG / WebP, or an animated GIF — colours auto-sample, and you can frame stills below</span></div>
             <div id="cropWrap" style="display:none">
               <div id="cropVp" class="crop-vp"><img id="cropImg" alt="" /></div>
+              <div id="gifNotice" class="gif-notice" style="display:none">
+                <b>Animated GIF</b> — the card will animate. Frame it exactly as you
+                would a still; the crop is applied to every frame when the card renders.
+                Colours are sampled from the first frame.
+                <span class="gif-warn">Keep it under ~8 MB and avoid rapid flashing — GIF is 256 colours, so busy footage may band.</span>
+              </div>
               <div class="croprow" style="margin-top:8px">
                 <span class="hint">zoom</span>
                 <input id="cropZoom" type="range" min="1" max="3" step="0.01" value="1" />

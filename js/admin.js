@@ -112,6 +112,7 @@ function showCropper(img) {
   $("#cropZoom").value = 1;
   applyCropTransform();
   refreshCropOutput(true);   // sample colours from the initial framing
+  updateGifNotice();
 }
 function clampPan() {
   const c = A.crop, dW = A.img.naturalWidth * c.scale, dH = A.img.naturalHeight * c.scale;
@@ -155,7 +156,7 @@ function refreshCropOutput(sample) {
       $("#sampleHint").textContent = "· auto-sampled (tweak below)";
     } catch (e) { $("#sampleHint").textContent = "· set colours manually"; }
   }
-  A.cropURL = cv.toDataURL("image/jpeg", 0.86);
+  A.cropURL = A.gifURL || cv.toDataURL("image/jpeg", 0.86);
   refreshPreview();
 }
 function scheduleCropOutput() {
@@ -195,7 +196,7 @@ A.hasBgImage = () => !!(A.cropURL || (A.editing && A.editing.image_name));
 
 /* ---------- editor ---------- */
 function openEditor(t) {
-  A.editing = t; A.img = null; A.crop = null; A.cropURL = null;
+  A.editing = t; A.img = null; A.crop = null; A.cropURL = null; A.isGif = false; A.newFile = null;
   $("#edTitle").textContent = t ? `Edit — ${t.name}` : "New theme";
   $("#delBtn").style.display = t ? "" : "none";
   $("#grantFld").style.display = t ? "" : "none";   // grant only after a theme has an id
@@ -232,10 +233,51 @@ function syncUnlockFields() {
 function onFile(file) {
   if (!file) return;
   A.newFile = file;
+  // An animated GIF can't survive the canvas crop — drawImage only ever gives us
+  // frame 1. So GIFs upload whole and the bot fits them to the card instead.
+  A.isGif = /gif/i.test(file.type) || /\.gif$/i.test(file.name);
+  // A GIF uploads whole and ships to Discord on every profile view, so an
+  // oversized one is a real cost. Stills are re-encoded, so size doesn't matter.
+  if (A.isGif && file.size > 8 * 1024 * 1024) {
+    toast(`That GIF is ${(file.size / 1048576).toFixed(1)} MB — keep it under 8 MB or cards may fail to post.`);
+  }
   const url = URL.createObjectURL(file);
+  // preview straight from the file so a GIF actually animates; a canvas export
+  // would only ever show frame 1
+  if (A.gifURL) URL.revokeObjectURL(A.gifURL);
+  A.gifURL = A.isGif ? url : null;
   const img = new Image();
   img.onload = () => showCropper(img);   // keep the object URL alive for the cropper canvas
   img.src = url;
+}
+
+function updateGifNotice() {
+  const el = $("#gifNotice");
+  if (el) el.style.display = A.isGif ? "" : "none";
+}
+
+/* The framing rectangle in normalised source coordinates (0–1).
+   A GIF can't be cropped in the browser — canvas only ever gives us frame 1 — so
+   instead of baking the crop in, we ship the rectangle to the bot and it applies
+   the same crop to every frame. Carried in the filename to avoid a schema change;
+   theme uploads already use content-unique names. */
+function cropRectNormalised() {
+  const c = A.crop, img = A.img;
+  if (!c || !img) return null;
+  const clamp01 = (v) => Math.min(1, Math.max(0, v));
+  return {
+    x: clamp01(-c.panX / c.scale / img.naturalWidth),
+    y: clamp01(-c.panY / c.scale / img.naturalHeight),
+    w: clamp01(c.vpW / c.scale / img.naturalWidth),
+    h: clamp01(c.vpH / c.scale / img.naturalHeight),
+  };
+}
+
+function cropSuffix() {
+  const r = cropRectNormalised();
+  if (!r) return "";
+  const k = (v) => String(Math.round(v * 1000)).padStart(4, "0");   // per-mille, filename-safe
+  return `__c${k(r.x)}${k(r.y)}${k(r.w)}${k(r.h)}`;
 }
 
 async function save() {
@@ -265,12 +307,22 @@ async function save() {
   $("#saveBtn").disabled = true;
   try {
     if (A.img && A.crop) {
-      // export the framed crop (already at the card's 900:520 aspect) as a JPEG
-      const blob = await new Promise((res) => exportCrop(1350).toBlob(res, "image/jpeg", 0.9));
-      const fname = `${id}_${Date.now()}.jpg`;
-      const up = await sb.storage.from("theme-images").upload(fname, blob, { contentType: "image/jpeg", upsert: true });
+      let blob, fname, ct;
+      if (A.isGif && A.newFile) {
+        // Upload the GIF untouched — re-encoding through a canvas would flatten it
+        // to frame 1. The bot resamples it to 8 frames and fits it to the card.
+        blob = A.newFile;
+        fname = `${id}_${Date.now()}${cropSuffix()}.gif`;
+        ct = "image/gif";
+      } else {
+        // export the framed crop (already at the card's 900:520 aspect) as a JPEG
+        blob = await new Promise((res) => exportCrop(1350).toBlob(res, "image/jpeg", 0.9));
+        fname = `${id}_${Date.now()}.jpg`;
+        ct = "image/jpeg";
+      }
+      const up = await sb.storage.from("theme-images").upload(fname, blob, { contentType: ct, upsert: true });
       if (up.error) throw up.error;
-      row.image_name = fname; row.fx = "image"; row.animated = false; row.grad = null;
+      row.image_name = fname; row.fx = "image"; row.animated = !!A.isGif; row.grad = null;
     }
     const { error } = await sb.from("themes").upsert(row, { onConflict: "id" });
     if (error) throw error;
