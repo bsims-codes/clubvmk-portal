@@ -1,0 +1,195 @@
+/* ============================================================
+   CLUBVMK — command activity analytics
+   ============================================================ */
+const CFG = window.CLUBVMK;
+const sb = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY);
+const ADMIN_IDS = ["886570059974201405"];
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const num = (n) => Number(n || 0).toLocaleString();
+const when = (t) => (t ? new Date(t).toLocaleString() : "—");
+
+const D = {
+  since: 30, commands: [], players: [], targets: [], recent: [], names: {},
+  playerSort: { k: "uses", dir: -1 }, tgtSort: { k: "times", dir: -1 },
+};
+
+/* PostgREST caps responses at 1000 rows; page through anything that can exceed it. */
+async function rpcAll(name, args, orderCols) {
+  const out = [];
+  for (let from = 0; ; from += 1000) {
+    let q = sb.rpc(name, args);
+    for (const c of orderCols) q = q.order(c);
+    const { data, error } = await q.range(from, from + 999);
+    if (error) return { error };
+    out.push(...(data || []));
+    if (!data || data.length < 1000) break;
+  }
+  return { data: out };
+}
+
+function discordIdFromSession(session) {
+  const u = session?.user; if (!u) return null;
+  const m = u.user_metadata || {};
+  const ident = (u.identities || []).find((i) => i.provider === "discord") || {};
+  return m.provider_id || m.sub || ident.id || ident.identity_data?.provider_id || null;
+}
+
+async function loadAll() {
+  const args = { since_days: D.since };
+  const [c, p, t, r] = await Promise.all([
+    rpcAll("activity_commands", args, ["command"]),
+    rpcAll("activity_players", args, ["discord_id"]),
+    rpcAll("activity_targets", args, ["command", "actor", "target"]),
+    sb.from("command_log").select("ts,discord_id,command,target_id")
+      .order("ts", { ascending: false }).limit(50),
+  ]);
+  if (c.error || p.error || t.error) {
+    $("#note").innerHTML = `⚠️ Activity data unavailable — run
+      <code>webportal/schema_activity.sql</code> in Supabase, then refresh.`;
+    return;
+  }
+  $("#note").innerHTML = "";
+  D.commands = c.data || [];
+  D.players = p.data || [];
+  D.targets = t.data || [];
+  D.recent = r.data || [];
+  D.names = {};
+  for (const x of D.players) if (x.display_name) D.names[x.discord_id] = x.display_name;
+  for (const x of D.targets) {
+    if (x.actor_name) D.names[x.actor] = x.actor_name;
+    if (x.target_name) D.names[x.target] = x.target_name;
+  }
+  renderCards(); renderCommands(); renderPlayers(); renderTargetFilter(); renderTargets(); renderRecent();
+}
+
+const nameOf = (id) => D.names[id] || id || "—";
+
+function renderCards() {
+  const uses = D.commands.reduce((a, c) => a + Number(c.uses || 0), 0);
+  const busiest = [...D.commands].sort((a, b) => b.uses - a.uses)[0];
+  const keenest = [...D.players].sort((a, b) => b.uses - a.uses)[0];
+  const cards = [
+    ["Commands run", num(uses)],
+    ["Distinct commands", num(D.commands.length)],
+    ["Active players", num(D.players.length)],
+    ["Most used", busiest ? `/${busiest.command}` : "—"],
+    ["Most active", keenest ? nameOf(keenest.discord_id) : "—"],
+    ["Targeted actions", num(D.targets.reduce((a, t) => a + Number(t.times || 0), 0))],
+  ];
+  $("#cards").innerHTML = cards.map(([k, v]) =>
+    `<div class="card"><div class="v">${esc(v)}</div><div class="k">${esc(k)}</div></div>`).join("");
+}
+
+function renderCommands() {
+  const rows = [...D.commands].sort((a, b) => b.uses - a.uses);
+  const max = Math.max(1, ...rows.map((r) => Number(r.uses || 0)));
+  $("#cmdChart").innerHTML = rows.map((r) => `
+    <div class="ubar" title="${esc(r.command)} — ${num(r.uses)} uses by ${num(r.users)} players, last ${when(r.last_used)}">
+      <span class="ubar-name">/${esc(r.command)}</span>
+      <span class="ubar-track"><span class="ubar-fill" style="width:${(r.uses / max * 100).toFixed(2)}%"></span></span>
+      <span class="ubar-val">${num(r.uses)}</span>
+    </div>`).join("") || `<p class="muted2">No commands recorded in this window.</p>`;
+}
+
+function sortRows(rows, s, nameKey) {
+  return rows.sort((a, b) => {
+    let av = a[s.k], bv = b[s.k];
+    if (s.k === nameKey) { av = String(av || "").toLowerCase(); bv = String(bv || "").toLowerCase(); }
+    else if (s.k === "last_used") { av = new Date(av || 0); bv = new Date(bv || 0); }
+    else { av = Number(av || 0); bv = Number(bv || 0); }
+    return (av < bv ? -1 : av > bv ? 1 : 0) * s.dir;
+  });
+}
+
+function renderPlayers() {
+  const q = $("#playerSearch").value.trim().toLowerCase();
+  let rows = D.players.map((p) => ({ ...p, name: nameOf(p.discord_id) }));
+  if (q) rows = rows.filter((p) => p.name.toLowerCase().includes(q) || p.discord_id.includes(q));
+  rows = sortRows(rows, D.playerSort, "name");
+  $("#playerTotal").textContent = `${rows.length} players`;
+  $("#playerTbl").querySelector("tbody").innerHTML = rows.map((p) =>
+    `<tr><td>${esc(p.name)}</td><td class="num">${num(p.uses)}</td>
+     <td class="num">${num(p.distinct_commands)}</td>
+     <td class="muted2">${esc(when(p.last_used))}</td></tr>`).join("")
+    || `<tr><td colspan="4" class="muted2">Nothing yet.</td></tr>`;
+}
+
+function renderTargetFilter() {
+  const cmds = [...new Set(D.targets.map((t) => t.command))].sort();
+  const cur = $("#tgtCmd").value || "all";
+  $("#tgtCmd").innerHTML = `<option value="all">All commands</option>` +
+    cmds.map((c) => `<option value="${esc(c)}">/${esc(c)}</option>`).join("");
+  $("#tgtCmd").value = cmds.includes(cur) ? cur : "all";
+}
+
+function renderTargets() {
+  const cmd = $("#tgtCmd").value, q = $("#tgtSearch").value.trim().toLowerCase();
+  let rows = D.targets.map((t) => ({
+    ...t, actor_name: nameOf(t.actor), target_name: nameOf(t.target),
+  }));
+  if (cmd !== "all") rows = rows.filter((t) => t.command === cmd);
+  if (q) rows = rows.filter((t) =>
+    t.actor_name.toLowerCase().includes(q) || t.target_name.toLowerCase().includes(q));
+  rows = sortRows(rows, D.tgtSort, "actor_name");
+  const total = rows.reduce((a, t) => a + Number(t.times || 0), 0);
+  $("#tgtTotal").textContent = `${rows.length} pairs · ${num(total)} actions`;
+  $("#tgtTbl").querySelector("tbody").innerHTML = rows.map((t) =>
+    `<tr><td>/${esc(t.command)}</td><td>${esc(t.actor_name)}</td>
+     <td>${esc(t.target_name)}</td><td class="num">${num(t.times)}</td></tr>`).join("")
+    || `<tr><td colspan="4" class="muted2">No targeted commands in this window.</td></tr>`;
+}
+
+function renderRecent() {
+  $("#recentTbl").querySelector("tbody").innerHTML = D.recent.map((r) =>
+    `<tr><td class="muted2">${esc(when(r.ts))}</td><td>${esc(nameOf(r.discord_id))}</td>
+     <td>/${esc(r.command)}</td>
+     <td class="muted2">${r.target_id ? esc(nameOf(r.target_id)) : "—"}</td></tr>`).join("")
+    || `<tr><td colspan="4" class="muted2">Nothing yet.</td></tr>`;
+}
+
+function wireSort(tblId, sortObj, rerender, nameKey) {
+  $("#" + tblId).querySelectorAll("th[data-k]").forEach((th) => {
+    th.onclick = () => {
+      const k = th.dataset.k;
+      if (sortObj.k === k) sortObj.dir *= -1;
+      else { sortObj.k = k; sortObj.dir = k === nameKey ? 1 : -1; }
+      rerender();
+    };
+  });
+}
+
+async function render(session) {
+  const id = discordIdFromSession(session);
+  const isAdmin = id && ADMIN_IDS.includes(String(id));
+  if (!session || !isAdmin) {
+    $("#gate").style.display = ""; $("#panel").style.display = "none";
+    if (session && !isAdmin) {
+      $("#signInBtn").style.display = "none";
+      $("#gateMsg").textContent = `This account isn't an admin. (${id || "no id"})`;
+    }
+    return;
+  }
+  $("#gate").style.display = "none"; $("#panel").style.display = "";
+  loadAll();
+}
+
+async function boot() {
+  $("#signInBtn").onclick = () => sb.auth.signInWithOAuth({
+    provider: "discord",
+    options: { redirectTo: location.href.split("#")[0], scopes: "identify" },
+  });
+  $("#signOutBtn").onclick = async (e) => { e.preventDefault(); await sb.auth.signOut(); location.reload(); };
+  $("#refreshBtn").onclick = (e) => { e.preventDefault(); loadAll(); };
+  $("#since").onchange = (e) => { D.since = Number(e.target.value); loadAll(); };
+  $("#playerSearch").oninput = renderPlayers;
+  $("#tgtSearch").oninput = renderTargets;
+  $("#tgtCmd").onchange = renderTargets;
+  wireSort("playerTbl", D.playerSort, renderPlayers, "name");
+  wireSort("tgtTbl", D.tgtSort, renderTargets, "actor_name");
+  sb.auth.onAuthStateChange((_e, s) => render(s));
+  const { data } = await sb.auth.getSession();
+  render(data.session);
+}
+boot();

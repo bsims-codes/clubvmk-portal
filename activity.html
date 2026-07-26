@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CLUBVMK · Activity</title>
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/styles.css" />
+<style>
+  .aw { max-width: 1080px; margin: 0 auto; padding: 24px 18px 90px; position: relative; z-index: 1; }
+  .ahead { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 6px; flex-wrap: wrap; }
+  .ahead h1 { font-family: "Fraunces", serif; font-size: 30px; margin: 0; }
+  .navlinks a { color: var(--muted); text-decoration: none; margin-left: 14px; font-size: 14px; }
+  .navlinks a:hover { color: var(--gold); }
+  .gate { text-align: center; padding: 80px 20px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 18px 0 26px; }
+  .card { background: #12162a; border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+  .card .v { font-family: "Fraunces", serif; font-size: 26px; font-weight: 700; }
+  .card .k { font-size: 12px; color: var(--faint); text-transform: uppercase; letter-spacing: .04em; margin-top: 2px; }
+  section.blk { margin-bottom: 26px; }
+  h2.sec { font-family: "Fraunces", serif; font-size: 20px; margin: 0 0 4px; }
+  .subtle { color: var(--faint); font-size: 13px; margin: 0 0 12px; }
+  .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+  .toolbar input, .toolbar select { padding: 8px 11px; border-radius: 9px; border: 1px solid var(--line); background: #0c1020; color: #eef; font: inherit; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--faint); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; cursor: pointer; user-select: none; white-space: nowrap; }
+  th.num, td.num { text-align: right; }
+  tbody tr:hover { background: rgba(150,165,230,.05); }
+  .tablewrap { max-height: 440px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; }
+  .muted2 { color: var(--faint); }
+  .warn:empty { display: none; }
+  .warn { color: #ffd27a; margin-bottom: 12px; }
+  .warn code { background: #1a1f38; padding: 1px 6px; border-radius: 5px; font-size: 12px; }
+  /* usage bars: single series, magnitude by length */
+  .ubar { display: grid; grid-template-columns: minmax(110px,190px) 1fr 62px; gap: 12px; align-items: center; padding: 3px 4px; border-radius: 6px; }
+  .ubar:hover { background: rgba(150,165,230,.07); }
+  .ubar-name { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ubar-track { height: 14px; background: rgba(150,165,230,.07); border-radius: 4px; }
+  .ubar-fill { display: block; height: 100%; border-radius: 0 4px 4px 0; background: var(--gold); }
+  .ubar-val { font-size: 12.5px; text-align: right; font-variant-numeric: tabular-nums; }
+  .chartwrap { max-height: 420px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; }
+</style>
+</head>
+<body>
+<div class="stars" aria-hidden="true"></div>
+<div class="aurora" aria-hidden="true"></div>
+
+<main class="aw">
+  <div id="gate" class="gate">
+    <h1>📈 Activity</h1>
+    <p class="muted" id="gateMsg">Sign in with Discord to view activity.</p>
+    <button id="signInBtn" class="btn gold" style="margin-top:14px">Sign in with Discord</button>
+  </div>
+
+  <div id="panel" style="display:none">
+    <div class="ahead">
+      <h1>📈 Activity</h1>
+      <div class="navlinks">
+        <a href="admin-home.html">🛠️ Admin home</a>
+        <a href="analytics.html">📊 Analytics</a>
+        <a id="refreshBtn" href="#">↻ Refresh</a>
+        <a id="signOutBtn" href="#">Sign out</a>
+      </div>
+    </div>
+    <p class="subtle">Who ran what, and who did it to whom.</p>
+    <p class="warn" id="note"></p>
+
+    <div class="toolbar">
+      <label class="muted2">Window
+        <select id="since">
+          <option value="1">Last 24 hours</option>
+          <option value="7">Last 7 days</option>
+          <option value="30" selected>Last 30 days</option>
+          <option value="365">Last year</option>
+          <option value="3650">All time</option>
+        </select>
+      </label>
+    </div>
+
+    <div id="cards" class="cards"></div>
+
+    <section class="blk">
+      <h2 class="sec">⌨️ Command usage</h2>
+      <p class="subtle">How often each command ran, and how many different players used it.</p>
+      <div class="chartwrap" id="cmdChart"></div>
+    </section>
+
+    <section class="blk">
+      <h2 class="sec">👤 Most active players</h2>
+      <div class="toolbar"><input id="playerSearch" type="text" placeholder="Find a player…" />
+        <span class="muted2" id="playerTotal"></span></div>
+      <div class="tablewrap"><table id="playerTbl"><thead><tr>
+        <th data-k="name">Player</th>
+        <th data-k="uses" class="num">Commands run</th>
+        <th data-k="distinct_commands" class="num">Different commands</th>
+        <th data-k="last_used">Last seen</th>
+      </tr></thead><tbody></tbody></table></div>
+    </section>
+
+    <section class="blk">
+      <h2 class="sec">🎯 Who did what to whom</h2>
+      <p class="subtle">Every command aimed at another player — freezes, duels, trades, curses.
+        Filter by command, or search a name to see who targeted them.</p>
+      <div class="toolbar">
+        <select id="tgtCmd"><option value="all">All commands</option></select>
+        <input id="tgtSearch" type="text" placeholder="Find a player (either side)…" />
+        <span class="muted2" id="tgtTotal"></span>
+      </div>
+      <div class="tablewrap"><table id="tgtTbl"><thead><tr>
+        <th data-k="command">Command</th>
+        <th data-k="actor_name">Who</th>
+        <th data-k="target_name">Target</th>
+        <th data-k="times" class="num">Times</th>
+      </tr></thead><tbody></tbody></table></div>
+    </section>
+
+    <section class="blk">
+      <h2 class="sec">🕘 Recent commands</h2>
+      <div class="tablewrap"><table id="recentTbl"><thead><tr>
+        <th>When</th><th>Player</th><th>Command</th><th>Target</th>
+      </tr></thead><tbody></tbody></table></div>
+    </section>
+  </div>
+</main>
+
+<div id="toast" class="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/activity.js"></script>
+</body>
+</html>
