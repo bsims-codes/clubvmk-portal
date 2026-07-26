@@ -185,8 +185,8 @@ body{
 .title-chip.on{background:var(--gold);color:#201800;border-color:var(--gold);font-weight:600}
 
 /* featured */
-.featured-row{display:flex;gap:12px}
-.featured-row .fslot{flex:1;aspect-ratio:1/.86;border-radius:12px;border:2px dashed var(--line);
+.featured-row{display:grid;grid-template-columns:repeat(var(--feat-cols,4),1fr);gap:12px}
+.featured-row .fslot{aspect-ratio:1/.86;border-radius:12px;border:2px dashed var(--line);
   background:var(--bg);display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer;overflow:hidden}
 .featured-row .fslot.filled{border-style:solid}
 .featured-row .fslot img{width:74%;height:74%;object-fit:contain}

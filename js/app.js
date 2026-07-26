@@ -4,7 +4,8 @@
 const CFG = window.CLUBVMK;
 const sb = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY);
 const RARITY = ["legendary", "epic", "rare", "uncommon", "common"];
-const FEATURED_MAX = 4;   // how many items a showcase can hold (keep in sync with the bot)
+const FEATURED_MAX = 8;        // how many items a showcase can hold (keep in sync with the bot)
+const FEATURED_PER_ROW = 4;    // slots per row, matching the rendered card's grid
 const $ = (s) => document.querySelector(s);
 
 // How many copies of an item the player holds. An item may take more than one
@@ -301,6 +302,8 @@ function renderThemes() {
 
 function renderFeatured() {
   const row = $("#featuredRow"); row.innerHTML = "";
+  row.style.setProperty("--feat-cols", FEATURED_PER_ROW);   // wrap like the rendered card
+  const note = $("#featMaxNote"); if (note) note.textContent = `up to ${FEATURED_MAX}`;
   for (let i = 0; i < FEATURED_MAX; i++) {
     const id = S.draft.featured[i];
     const it = id && S.catalog[id];
