@@ -7,6 +7,24 @@ const RARITY = ["legendary", "epic", "rare", "uncommon", "common"];
 const FEATURED_MAX = 4;   // how many items a showcase can hold (keep in sync with the bot)
 const $ = (s) => document.querySelector(s);
 
+// How many copies of an item the player holds. An item may take more than one
+// showcase slot, but never more slots than they own copies.
+const ownedCount = (id) => S.inv.find((r) => r.item_id === id)?.count || 0;
+const featCount = (id) => S.draft.featured.filter((x) => x === id).length;
+
+// Mirror of the bot's clamp_featured(): drop unknown/unowned ids, allow a
+// duplicate only up to the number of copies held, then cap at FEATURED_MAX.
+function clampFeatured(feat) {
+  const out = [], used = {};
+  for (const id of Array.isArray(feat) ? feat : []) {
+    const n = used[id] || 0;
+    if (!S.catalog[id] || n >= ownedCount(id)) continue;
+    out.push(id); used[id] = n + 1;
+    if (out.length >= FEATURED_MAX) break;
+  }
+  return out;
+}
+
 const S = {
   user: null, discordId: null, name: "Collector", avatar: null,
   guilds: [], guild: null,
@@ -153,7 +171,7 @@ async function loadData() {
   S.draft = {
     theme: prof?.theme || CFG.DEFAULT_THEME,
     accent_color: prof?.accent_color || null,
-    featured: Array.isArray(prof?.featured) ? prof.featured.slice(0, FEATURED_MAX) : [],
+    featured: clampFeatured(prof?.featured),
     bio: prof?.bio || "",
     hidden_titles: Array.isArray(prof?.hidden_titles) ? prof.hidden_titles.slice() : [],
   };
@@ -317,10 +335,11 @@ function renderFeatured() {
 
 function dropInvOnSlot(i, itemId) {
   if (!S.catalog[itemId]) return;
-  let f = S.draft.featured.slice();
+  const f = S.draft.featured.slice();
   if (i < f.length) f[i] = itemId; else f.push(itemId);   // replace that slot, or fill next
-  const seen = new Set();                                  // dedup (item can't be featured twice)
-  f = f.filter((x) => (seen.has(x) ? false : (seen.add(x), true)));
+  const owned = ownedCount(itemId);                       // dupes are fine — spare copies aren't
+  if (f.filter((x) => x === itemId).length > owned)
+    return toast(owned ? `You only own ${owned}× that item.` : "You don't own that item.", true);
   S.draft.featured = f.slice(0, FEATURED_MAX);
   touch(); renderFeatured(); renderInv();
 }
@@ -381,9 +400,9 @@ function renderInv() {
   S.invPage = Math.min(S.invPage, pages - 1);
   const slice = all.slice(S.invPage * PER, S.invPage * PER + PER);
   grid.innerHTML = slice.map((r) => {
-    const feat = S.draft.featured.includes(r.item_id);
-    return `<div class="inv-item${feat ? " featured" : ""}" data-r="${r.it.r}" data-id="${r.item_id}">
-      ${r.count > 1 ? `<span class="ct">×${r.count}</span>` : ""}
+    const nfeat = featCount(r.item_id);
+    return `<div class="inv-item${nfeat ? " featured" : ""}" data-r="${r.it.r}" data-id="${r.item_id}">
+      ${r.count > 1 ? `<span class="ct">${nfeat > 1 ? `★${nfeat} · ` : ""}×${r.count}</span>` : ""}
       <img loading="lazy" src="${imgUrl(r.it.img)}" alt=""><div class="nm">${esc(r.it.n)}</div></div>`;
   }).join("");
   grid.querySelectorAll(".inv-item").forEach((el) => {
@@ -417,8 +436,10 @@ function showItemMenu(x, y, id) {
     rows.push(`<button class="ctx-item" data-i="${acts.length}">Slot ${i + 1} <span class="ctx-sub">${esc(occ)}</span></button>`);
     acts.push(() => dropInvOnSlot(i, id));
   }
-  if (S.draft.featured.includes(id)) {
-    rows.push(`<button class="ctx-item danger" data-i="${acts.length}">Remove from showcase</button>`);
+  const nfeat = featCount(id);
+  if (nfeat) {
+    rows.push(`<button class="ctx-item danger" data-i="${acts.length}">Remove from showcase${
+      nfeat > 1 ? ` <span class="ctx-sub">1 of ${nfeat}</span>` : ""}</button>`);
     acts.push(() => {
       const idx = S.draft.featured.indexOf(id);
       if (idx >= 0) { S.draft.featured.splice(idx, 1); touch(); renderFeatured(); renderInv(); }
@@ -434,10 +455,18 @@ function showItemMenu(x, y, id) {
 }
 function hideCtxMenu() { $("#ctxMenu").classList.add("hidden"); }
 
+// Click cycles: add a copy while spares remain, then clear one on the next
+// click. (Single-copy items behave exactly as before — add, then remove.)
 function toggleFeature(id) {
-  const i = S.draft.featured.indexOf(id);
-  if (i >= 0) S.draft.featured.splice(i, 1);
-  else { if (S.draft.featured.length >= FEATURED_MAX) return toast(`Showcase is full (${FEATURED_MAX}). Remove one first.`); S.draft.featured.push(id); }
+  if (featCount(id) >= ownedCount(id)) {
+    const i = S.draft.featured.indexOf(id);
+    if (i >= 0) S.draft.featured.splice(i, 1);
+    else return;                                  // owns none of it
+  } else if (S.draft.featured.length >= FEATURED_MAX) {
+    return toast(`Showcase is full (${FEATURED_MAX}). Remove one first.`);
+  } else {
+    S.draft.featured.push(id);
+  }
   touch(); renderFeatured(); renderInv(); renderPreview();
 }
 
