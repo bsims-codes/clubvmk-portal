@@ -73,11 +73,12 @@ async function loadCatalog() {
 // item/player — so a plain call silently truncates (the item stats sat at
 // exactly 1000 for ages). Page through in 1000s, ordered so no row straddles a
 // page boundary, exactly like the overrides fetch above.
-async function rpcAll(name, orderCol) {
+async function rpcAll(name, orderCols) {
   const out = [];
   for (let from = 0; ; from += 1000) {
-    const { data, error } = await sb.rpc(name)
-      .select("*").order(orderCol).range(from, from + 999);
+    let q = sb.rpc(name);
+    for (const c of orderCols) q = q.order(c);   // ties would shuffle across pages
+    const { data, error } = await q.range(from, from + 999);
     if (error) return { error };
     out.push(...(data || []));
     if (!data || data.length < 1000) break;
@@ -88,9 +89,9 @@ async function rpcAll(name, orderCol) {
 async function loadAll() {
   await loadCatalog();
   const [pl, to, is] = await Promise.all([
-    rpcAll("analytics_players", "discord_id"),
-    rpcAll("analytics_theme_owners", "theme_id"),
-    rpcAll("analytics_item_stats", "item_id"),
+    rpcAll("analytics_players", ["discord_id"]),
+    rpcAll("analytics_theme_owners", ["theme_id", "discord_id"]),
+    rpcAll("analytics_item_stats", ["item_id"]),
   ]);
   for (const r of [pl, to, is]) if (r.error) { toast("Query failed: " + r.error.message + " — did you run schema_analytics.sql?"); return; }
   D.players = pl.data || [];
