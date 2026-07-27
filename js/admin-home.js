@@ -31,7 +31,49 @@ async function render(session) {
     return;
   }
   $("#gate").style.display = "none"; $("#panel").style.display = "";
+  A.me = id;
+  loadGuilds();
   loadQueue();
+}
+
+/* ---------- announcements ---------- */
+const A = { me: null };
+
+async function loadGuilds() {
+  const sel = $("#annGuild");
+  const { data, error } = await sb.rpc("admin_list_players");
+  const seen = {};
+  for (const r of (error ? [] : data || [])) seen[r.guild_id] = r.guild_name || r.guild_id;
+  const opts = Object.entries(seen);
+  sel.innerHTML = (opts.length ? opts : [["", "— no servers found —"]])
+    .map(([id, name]) => `<option value="${esc(id)}">${esc(name)}</option>`).join("")
+    + `<option value="">All servers</option>`;
+}
+
+async function sendAnnouncement() {
+  const text = $("#annText").value.trim();
+  if (!text) return toast("Write a message first", true);
+  const guild = $("#annGuild").value || null;
+  const payload = { text, embed: $("#annEmbed").checked };
+  const ch = $("#annChannel").value.trim();
+  if (ch) payload.channel_id = ch;
+  const title = $("#annTitle").value.trim();
+  if (title) payload.title = title;
+  const { error } = await sb.from("admin_actions").insert({
+    action: "announce", discord_id: String(A.me), guild_id: guild,
+    payload, created_by: String(A.me),
+  });
+  if (error) return toast("Failed: " + error.message, true);
+  $("#annText").value = ""; $("#annTitle").value = "";
+  toast("Queued — the bot will post it within a few seconds.");
+  setTimeout(loadQueue, 2500);
+}
+
+let toastT;
+function toast(msg, err) {
+  const t = $("#toast"); t.textContent = msg;
+  t.className = "toast show" + (err ? " err" : "");
+  clearTimeout(toastT); toastT = setTimeout(() => (t.className = "toast"), 3600);
 }
 
 async function loadQueue() {
@@ -68,6 +110,7 @@ async function boot() {
     options: { redirectTo: location.href.split("#")[0], scopes: "identify" },
   });
   $("#signOutBtn").onclick = async (e) => { e.preventDefault(); await sb.auth.signOut(); location.reload(); };
+  $("#annSend").onclick = sendAnnouncement;
   sb.auth.onAuthStateChange((_e, s) => render(s));
   const { data } = await sb.auth.getSession();
   render(data.session);

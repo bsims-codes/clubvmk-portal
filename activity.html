@@ -43,6 +43,12 @@
   .ubar-fill { display: block; height: 100%; border-radius: 0 4px 4px 0; background: var(--gold); }
   .ubar-val { font-size: 12.5px; text-align: right; font-variant-numeric: tabular-nums; }
   .chartwrap { max-height: 420px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; }
+  .cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 820px) { .cols2 { grid-template-columns: 1fr; } }
+  h3.sub { font-family: "Fraunces", serif; font-size: 15px; margin: 14px 0 8px; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 8px; font-size: 11px; font-weight: 600; }
+  .r-legendary{background:#5a3a00;color:#ffcf6a}.r-epic{background:#3a1f5e;color:#d6a6ff}.r-rare{background:#0f2c5e;color:#8fb6ff}.r-uncommon{background:#123a20;color:#84e0a0}.r-common{background:#2a2f47;color:#c4cbe6}
+  .s-accepted{background:#123a20;color:#84e0a0}.s-declined{background:#4a1420;color:#ff9aa8}.s-expired{background:#2a2f47;color:#c4cbe6}
 </style>
 </head>
 <body>
@@ -115,6 +121,31 @@
         <th data-k="actor_name">Who</th>
         <th data-k="target_name">Target</th>
         <th data-k="times" class="num">Times</th>
+      </tr></thead><tbody></tbody></table></div>
+    </section>
+
+    <section class="blk">
+      <h2 class="sec">🤝 Trades</h2>
+      <p class="subtle" id="tradeNote">Every offer and how it ended. Rarity is resolved from the
+        live catalogue, so re-tiered items always read correctly.</p>
+      <div id="tradeCards" class="cards"></div>
+      <div class="cols2">
+        <div>
+          <h3 class="sub">By rarity</h3>
+          <div class="tablewrap"><table id="tradeRarTbl"><thead><tr>
+            <th>Rarity</th><th class="num">Items traded</th><th class="num">Share</th>
+          </tr></thead><tbody></tbody></table></div>
+        </div>
+        <div>
+          <h3 class="sub">Most traded items</h3>
+          <div class="tablewrap"><table id="tradeItemTbl"><thead><tr>
+            <th>Item</th><th>Rarity</th><th class="num">Times</th>
+          </tr></thead><tbody></tbody></table></div>
+        </div>
+      </div>
+      <h3 class="sub">Recent trades</h3>
+      <div class="tablewrap"><table id="tradeTbl"><thead><tr>
+        <th>When</th><th>From</th><th>Gave</th><th>To</th><th>Gave back</th><th>Result</th>
       </tr></thead><tbody></tbody></table></div>
     </section>
 

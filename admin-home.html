@@ -41,6 +41,17 @@
   .s-pending { background: #5a3a00; color: #ffcf6a; }
   .s-error { background: #4a1420; color: #ff9aa8; }
   .muted2 { color: var(--faint); }
+  .ann-box { background: #0e1226; border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+  .ann-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 10px; }
+  .fld { display: flex; flex-direction: column; gap: 4px; }
+  .fld > span { font-size: 11px; color: var(--faint); text-transform: uppercase; letter-spacing: .04em; }
+  .fld > span em { text-transform: none; letter-spacing: 0; font-style: normal; }
+  .grow { flex: 1; min-width: 200px; }
+  .ann-box input, .ann-box select, .ann-box textarea {
+    width: 100%; padding: 8px 11px; border-radius: 9px; border: 1px solid var(--line);
+    background: #0c1020; color: #eef; font: inherit; }
+  .ann-box textarea { resize: vertical; margin-bottom: 10px; }
+  .chk { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; }
 </style>
 </head>
 <body>
@@ -87,6 +98,28 @@
         <span class="tag">live in ~2 min</span>
       </a>
     </div>
+
+    <section class="status">
+      <h2>📣 Post an announcement</h2>
+      <p class="subtle">Sent by the bot into the spawn channel, or any channel id you give it.</p>
+      <div class="ann-box">
+        <div class="ann-row">
+          <label class="fld grow"><span>Server</span>
+            <select id="annGuild"></select></label>
+          <label class="fld grow"><span>Channel id <em>(blank = spawn channel)</em></span>
+            <input id="annChannel" type="text" placeholder="e.g. 1527854586579390567" /></label>
+        </div>
+        <label class="fld"><span>Message</span>
+          <textarea id="annText" rows="4" placeholder="What should the bot say?"></textarea></label>
+        <div class="ann-row">
+          <label class="fld grow"><span>Embed title <em>(optional)</em></span>
+            <input id="annTitle" type="text" placeholder="Leave blank for a plain message" /></label>
+          <label class="chk"><input type="checkbox" id="annEmbed" /> Send as an embed</label>
+          <button class="btn gold" id="annSend">Post it</button>
+        </div>
+        <p class="muted2" id="annHint">Markdown works. Mentions like &lt;@id&gt; and &lt;#id&gt; resolve.</p>
+      </div>
+    </section>
 
     <section class="status">
       <h2>Recent admin actions</h2>

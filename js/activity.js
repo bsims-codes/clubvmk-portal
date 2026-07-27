@@ -10,10 +10,34 @@ const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) =>
 const num = (n) => Number(n || 0).toLocaleString();
 const when = (t) => (t ? new Date(t).toLocaleString() : "—");
 
+const RARITY = ["legendary", "epic", "rare", "uncommon", "common"];
 const D = {
   since: 30, commands: [], players: [], targets: [], recent: [], names: {},
+  trades: [], catalog: {},
   playerSort: { k: "uses", dir: -1 }, tgtSort: { k: "times", dir: -1 },
 };
+
+const baseItemId = (id) => (id.includes("*") ? id.slice(0, id.lastIndexOf("*")) : id);
+const pill = (r) => `<span class="pill r-${r}">${r}</span>`;
+
+/* The catalogue + curator overrides give rarity at display time, so a re-tiered
+   item reads correctly in history rather than however it was tiered back then. */
+async function loadCatalog() {
+  if (Object.keys(D.catalog).length) return;
+  const cat = await fetch("data/catalog.min.json", { cache: "no-cache" }).then((r) => r.json());
+  for (const it of cat) D.catalog[it.id] = { id: it.id, n: it.n, r: it.r };
+  try {
+    const map = {};
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await sb.from("overrides").select("item_id,tier")
+        .order("item_id").range(from, from + 999);
+      if (error) throw error;
+      for (const o of data || []) map[o.item_id] = o.tier;
+      if (!data || data.length < 1000) break;
+    }
+    for (const id in D.catalog) D.catalog[id].r = map[baseItemId(id)] || "common";
+  } catch (e) { /* keep the baked rarities */ }
+}
 
 /* PostgREST caps responses at 1000 rows; page through anything that can exceed it. */
 async function rpcAll(name, args, orderCols) {
@@ -36,7 +60,22 @@ function discordIdFromSession(session) {
   return m.provider_id || m.sub || ident.id || ident.identity_data?.provider_id || null;
 }
 
+async function loadTrades() {
+  const cutoff = new Date(Date.now() - D.since * 86400e3).toISOString();
+  const out = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await sb.from("trade_log")
+      .select("ts,proposer_id,target_id,give_item,receive_item,status")
+      .gte("ts", cutoff).order("ts", { ascending: false }).range(from, from + 999);
+    if (error) return { error };
+    out.push(...(data || []));
+    if (!data || data.length < 1000) break;
+  }
+  return { data: out };
+}
+
 async function loadAll() {
+  await loadCatalog();
   const args = { since_days: D.since };
   const [c, p, t, r] = await Promise.all([
     rpcAll("activity_commands", args, ["command"]),
@@ -61,7 +100,65 @@ async function loadAll() {
     if (x.actor_name) D.names[x.actor] = x.actor_name;
     if (x.target_name) D.names[x.target] = x.target_name;
   }
-  renderCards(); renderCommands(); renderPlayers(); renderTargetFilter(); renderTargets(); renderRecent();
+  const tr = await loadTrades();
+  D.trades = tr.error ? [] : (tr.data || []);
+  $("#tradeNote").innerHTML = tr.error
+    ? `⚠️ Trade history unavailable — run <code>webportal/schema_trades.sql</code> in Supabase.`
+    : "Every offer and how it ended. Rarity is resolved from the live catalogue, " +
+      "so re-tiered items always read correctly.";
+  renderCards(); renderCommands(); renderPlayers(); renderTargetFilter(); renderTargets();
+  renderTrades(); renderRecent();
+}
+
+/* ---------- trades ---------- */
+const rarOf = (id) => D.catalog[id]?.r || "common";
+const itemName = (id) => D.catalog[id]?.n?.trim() || id;
+
+function renderTrades() {
+  const all = D.trades, done = all.filter((t) => t.status === "accepted");
+  const traders = new Set();
+  for (const t of done) { traders.add(t.proposer_id); traders.add(t.target_id); }
+  const cards = [
+    ["Trades completed", num(done.length)],
+    ["Offers made", num(all.length)],
+    ["Declined", num(all.filter((t) => t.status === "declined").length)],
+    ["Expired", num(all.filter((t) => t.status === "expired").length)],
+    ["Accept rate", all.length ? `${Math.round(done.length / all.length * 100)}%` : "—"],
+    ["Players trading", num(traders.size)],
+  ];
+  $("#tradeCards").innerHTML = cards.map(([k, v]) =>
+    `<div class="card"><div class="v">${esc(v)}</div><div class="k">${esc(k)}</div></div>`).join("");
+
+  // rarity of every item that actually changed hands (both sides of a trade)
+  const byRar = {}, byItem = {};
+  for (const t of done) {
+    for (const id of [t.give_item, t.receive_item]) {
+      const r = rarOf(id);
+      byRar[r] = (byRar[r] || 0) + 1;
+      byItem[id] = (byItem[id] || 0) + 1;
+    }
+  }
+  const moved = Object.values(byRar).reduce((a, b) => a + b, 0);
+  $("#tradeRarTbl").querySelector("tbody").innerHTML = RARITY.map((r) => {
+    const n = byRar[r] || 0;
+    return `<tr><td>${pill(r)}</td><td class="num">${num(n)}</td>
+      <td class="num">${moved ? (n / moved * 100).toFixed(1) + "%" : "—"}</td></tr>`;
+  }).join("");
+
+  const top = Object.entries(byItem).sort((a, b) => b[1] - a[1]).slice(0, 25);
+  $("#tradeItemTbl").querySelector("tbody").innerHTML = top.map(([id, n]) =>
+    `<tr><td>${esc(itemName(id))}</td><td>${pill(rarOf(id))}</td>
+     <td class="num">${num(n)}</td></tr>`).join("")
+    || `<tr><td colspan="3" class="muted2">No completed trades yet.</td></tr>`;
+
+  $("#tradeTbl").querySelector("tbody").innerHTML = all.slice(0, 40).map((t) =>
+    `<tr><td class="muted2">${esc(when(t.ts))}</td>
+     <td>${esc(nameOf(t.proposer_id))}</td>
+     <td>${esc(itemName(t.give_item))} ${pill(rarOf(t.give_item))}</td>
+     <td>${esc(nameOf(t.target_id))}</td>
+     <td>${esc(itemName(t.receive_item))} ${pill(rarOf(t.receive_item))}</td>
+     <td><span class="pill s-${esc(t.status)}">${esc(t.status)}</span></td></tr>`).join("")
+    || `<tr><td colspan="6" class="muted2">No trades in this window.</td></tr>`;
 }
 
 const nameOf = (id) => D.names[id] || id || "—";
