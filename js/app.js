@@ -160,9 +160,27 @@ function showLanding() {
 }
 
 /* ---------- load player data ---------- */
+// PostgREST caps a single response (1000 rows by default), and it does NOT tell
+// you the result was truncated. A big collection silently lost everything past
+// the cap — items were in the database and visible in Discord but simply never
+// reached the page. Always page through with a stable order: without ORDER BY,
+// paging can skip and repeat rows.
+async function fetchAllRows(table, columns, order) {
+  const PAGE = 1000;
+  const out = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await sb.from(table).select(columns)
+      .order(order).range(from, from + PAGE - 1);
+    if (error) return { data: null, error };
+    out.push(...(data || []));
+    if (!data || data.length < PAGE) return { data: out, error: null };
+  }
+}
+
 async function loadData() {
   // which guild(s) does this player have data in?
-  const { data: rows, error } = await sb.from("player_items").select("guild_id,item_id,count");
+  const { data: rows, error } = await fetchAllRows(
+    "player_items", "guild_id,item_id,count", "item_id");
   if (error) {
     if (/relation|does not exist/i.test(error.message))
       return notReady("The database isn't set up yet — run schema.sql in Supabase.");
@@ -404,7 +422,7 @@ function filteredInv() {
     .map((r) => ({ ...r, it: S.catalog[r.item_id] || unknownItem(r.item_id) }))
     .filter((r) => S.invRarity === "all" || r.it.r === S.invRarity)
     .filter((r) => S.invCat === "all" || r.it.c === S.invCat)
-    .filter((r) => !S.invSearch || r.it.n.toLowerCase().includes(S.invSearch));
+    .filter((r) => nameMatches(r.it.n, S.invSearch));
   const byName = (a, b) => a.it.n.localeCompare(b.it.n);
   const rIdx = (x) => RARITY.indexOf(x.it.r);
   const sorts = {
@@ -586,6 +604,17 @@ function finishRender() {
 
 /* ---------- helpers ---------- */
 function imgUrl(f) { return CFG.ITEM_IMG_BASE + f; }
+// Item names carry punctuation ("Room Pin - Oogie's Lair", "Lanyard - Black"),
+// so a plain substring match misses what people type ("oogie lair"). Strip the
+// punctuation and require every word, in any order.
+const normName = (s) => String(s ?? "").toLowerCase()
+  .replace(/[‘’'`´]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+function nameMatches(name, query) {
+  const terms = normName(query).split(" ").filter(Boolean);
+  if (!terms.length) return true;
+  const hay = normName(name);
+  return terms.every((t) => hay.includes(t));
+}
 function rgb(a) { return `rgb(${a[0]},${a[1]},${a[2]})`; }
 function rgbHex(a) { return "#" + a.map((n) => n.toString(16).padStart(2, "0")).join(""); }
 function cap(s) { return s[0].toUpperCase() + s.slice(1); }

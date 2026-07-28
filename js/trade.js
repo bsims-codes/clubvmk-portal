@@ -22,6 +22,18 @@ const imgUrl = (f) => CFG.ITEM_IMG_BASE + f;
 const baseItemId = (id) => (id.includes("*") ? id.slice(0, id.lastIndexOf("*")) : id);
 const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 
+// Item names are full of punctuation ("Room Pin - Oogie's Lair"), so a plain
+// substring search fails on what people actually type ("oogie lair"). Strip
+// punctuation and match every word instead, in any order.
+const normName = (s) => String(s ?? "").toLowerCase()
+  .replace(/[‘’'`´]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+function nameMatches(name, query) {
+  const terms = normName(query).split(" ").filter(Boolean);
+  if (!terms.length) return true;
+  const hay = normName(name);
+  return terms.every((t) => hay.includes(t));
+}
+
 /* Only these rarities are public — "hold" and anything else the curator uses
    internally never appears in a filter or a result list. */
 const PUBLIC_RARITY = new Set(RARITY);
@@ -72,6 +84,35 @@ function toast(msg, err) {
   const t = $("#toast"); t.textContent = msg;
   t.className = "toast show" + (err ? " err" : "");
   clearTimeout(toastT); toastT = setTimeout(() => (t.className = "toast"), 3800);
+}
+
+// PostgREST silently caps a response at 1000 rows, so anything reading a whole
+// inventory has to page. `filter` applies the same where-clause to every page;
+// the stable order stops paging from skipping or repeating rows.
+async function fetchAllRows(table, columns, filter) {
+  const PAGE = 1000;
+  const out = [];
+  for (let from = 0; ; from += PAGE) {
+    let q = sb.from(table).select(columns);
+    if (filter) q = filter(q);
+    const { data, error } = await q.order("item_id").range(from, from + PAGE - 1);
+    if (error) return { data: null, error };
+    out.push(...(data || []));
+    if (!data || data.length < PAGE) return { data: out, error: null };
+  }
+}
+
+// same cap applies to set-returning functions
+async function fetchAllRpc(fn, args) {
+  const PAGE = 1000;
+  const out = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await sb.rpc(fn, args)
+      .order("item_id").range(from, from + PAGE - 1);
+    if (error) return { data: null, error };
+    out.push(...(data || []));
+    if (!data || data.length < PAGE) return { data: out, error: null };
+  }
 }
 
 function discordIdFromSession(session) {
@@ -170,7 +211,7 @@ function itemFirst() {
       hits.innerHTML = `<span class="muted2">Type at least 2 letters, or filter above.</span>`;
       return;
     }
-    const found = T.list.filter((it) => f.ok(it) && (!s || it.n.toLowerCase().includes(s)))
+    const found = T.list.filter((it) => f.ok(it) && nameMatches(it.n, s))
       .sort((a, b) => RARITY.indexOf(a.r) - RARITY.indexOf(b.r) || a.n.localeCompare(b.n))
       .slice(0, 40);
     if (!found.length) { hits.innerHTML = `<span class="muted2">No item matches that.</span>`; return; }
@@ -240,7 +281,7 @@ async function userFirst() {
   function draw() {
     const s = (q.value || "").trim().toLowerCase();
     const box = $("#userHits");
-    const rows = T.players.filter((p) => !s || p.display_name.toLowerCase().includes(s));
+    const rows = T.players.filter((p) => nameMatches(p.display_name, s));
     if (!rows.length) { box.innerHTML = `<span class="muted2">No player matches that.</span>`; return; }
     box.innerHTML = "";
     for (const p of rows.slice(0, 100)) {
@@ -271,7 +312,8 @@ async function browseInventory(player) {
   $("#backUsers").onclick = userFirst;
   theirFilter.wire();
 
-  const { data, error } = await sb.rpc("trade_inventory", {
+  // set-returning RPCs are capped the same way, so page this one too
+  const { data, error } = await fetchAllRpc("trade_inventory", {
     p_discord_id: player.discord_id, p_guild_id: player.guild_id });
   const box = $("#theirs");
   if (error) { box.innerHTML = `<span class="muted2">Couldn't load: ${esc(error.message)}</span>`; return; }
@@ -288,7 +330,7 @@ async function browseInventory(player) {
   function draw() {
     const s = ($("#invQ")?.value || "").trim().toLowerCase();
     const rows = T.theirInv.filter((r) => theirFilter.ok(r.item)
-      && (!s || (r.item.n || "").toLowerCase().includes(s)));
+      && nameMatches(r.item.n, s));
     if (!rows.length) { box.innerHTML = `<span class="muted2">Nothing matches that.</span>`; return; }
     box.innerHTML = "";
     for (const r of rows.slice(0, 300)) {
@@ -327,9 +369,12 @@ async function offerStep() {
   mineFilter.wire();
   drawDeal();
 
-  // your own inventory in that same server (RLS already scopes this to you)
-  const { data, error } = await sb.from("player_items")
-    .select("item_id,count").eq("guild_id", T.owner.guild_id).gt("count", 0);
+  // your own inventory in that same server (RLS already scopes this to you).
+  // Paged: PostgREST truncates at 1000 rows without saying so, which would hide
+  // the tail of a big collection from the "what you'll give" list.
+  const { data, error } = await fetchAllRows(
+    "player_items", "item_id,count",
+    (q) => q.eq("guild_id", T.owner.guild_id).gt("count", 0));
   const box = $("#mine");
   if (error) { box.innerHTML = `<span class="muted2">Couldn't load: ${esc(error.message)}</span>`; return; }
   const mine = (data || []).map((r) => ({ item: T.catalog[r.item_id], count: r.count }))
@@ -347,7 +392,7 @@ async function offerStep() {
   function draw() {
     const s = ($("#mineQ")?.value || "").trim().toLowerCase();
     const rows = mine.filter((r) => mineFilter.ok(r.item)
-      && (!s || (r.item.n || "").toLowerCase().includes(s)));
+      && nameMatches(r.item.n, s));
     if (!rows.length) { box.innerHTML = `<span class="muted2">Nothing matches that.</span>`; return; }
     box.innerHTML = "";
     for (const r of rows.slice(0, 300)) {
