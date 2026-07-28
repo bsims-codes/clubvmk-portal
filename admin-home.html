@@ -164,13 +164,21 @@
     </section>
 
     <section class="status">
-      <h2>🎁 Legendary Crate vault</h2>
+      <h2>🎁 Crate vault</h2>
       <p class="subtle">Posts a timed button in the channel — everyone who clicks before the
-        clock runs out opens one free Legendary Crate. One per player.</p>
+        clock runs out opens one free crate of the rarity you pick. One per player.</p>
       <div class="ann-box">
         <div class="ann-row">
           <label class="fld grow"><span>Server</span>
             <select id="lrGuild"></select></label>
+          <label class="fld"><span>Crate rarity</span>
+            <select id="lrRarity">
+              <option value="common">⚪ Common</option>
+              <option value="uncommon">🟢 Uncommon</option>
+              <option value="rare">🔵 Rare</option>
+              <option value="epic">🟣 Epic</option>
+              <option value="legendary" selected>🟠 Legendary</option>
+            </select></label>
           <label class="fld grow"><span>Channel id <em>(blank = spawn channel)</em></span>
             <input id="lrChannel" type="text" placeholder="e.g. 1527854586579390567" /></label>
           <label class="fld"><span>Minutes open</span>
@@ -182,8 +190,8 @@
                    placeholder="e.g. 1531376611180417044" /></label>
           <button class="btn gold" id="lrGo">Open the vault</button>
         </div>
-        <p class="muted2">Every claim is a random legendary from the live catalogue. The post
-          lists what people pulled and closes itself when the time is up.</p>
+        <p class="muted2">Every claim is a random item of that rarity from the live catalogue.
+          The post lists what people pulled and closes itself when the time is up.</p>
       </div>
     </section>
 

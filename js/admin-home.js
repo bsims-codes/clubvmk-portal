@@ -131,11 +131,12 @@ async function togglePause() {
   toast("The bot hasn't confirmed that yet — check it's running.", true);
 }
 
-/* ---------- legendary crate vault ---------- */
+/* ---------- crate vault (any rarity) ---------- */
 async function openVault() {
   const mins = Number($("#lrMins").value || 0);
   if (!(mins >= 1 && mins <= 60)) return toast("Pick 1–60 minutes", true);
-  const payload = { minutes: mins, host: "the CLUBVMK crew" };
+  const rarity = $("#lrRarity").value || "legendary";
+  const payload = { minutes: mins, rarity, host: "the CLUBVMK crew" };
   const ch = $("#lrChannel").value.trim();
   if (ch) payload.channel_id = ch;
   const ping = $("#lrPing").value.trim();
@@ -145,7 +146,7 @@ async function openVault() {
     guild_id: $("#lrGuild").value || null, payload, created_by: String(A.me),
   });
   if (error) return toast("Failed: " + error.message, true);
-  toast(`Queued — the vault opens for ${mins} min within a few seconds.`);
+  toast(`Queued — the ${rarity} vault opens for ${mins} min within a few seconds.`);
   setTimeout(loadQueue, 2500);
 }
 
