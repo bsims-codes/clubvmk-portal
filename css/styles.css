@@ -68,6 +68,7 @@ body{
 .btn.ghost{background:transparent}
 .btn.ghost:hover{border-color:var(--gold);color:var(--gold-soft)}
 .btn.tiny{padding:6px 11px;font-size:12px;border-radius:8px}
+a.btn{text-decoration:none;display:inline-flex;align-items:center;gap:6px}
 .btn-discord{cursor:pointer;display:inline-flex;align-items:center;gap:12px;font-family:inherit;
   font-weight:600;font-size:16px;color:#fff;background:#5865F2;border:none;border-radius:14px;
   padding:15px 26px;box-shadow:0 14px 30px -10px rgba(88,101,242,.7);transition:.16s}

@@ -143,7 +143,8 @@ async function render(session) {
   S.avatar = m.avatar_url || m.picture || ident.identity_data?.avatar_url || ident.identity_data?.picture || null;
 
   $("#authSlot").innerHTML =
-    `<div class="who">${S.avatar ? `<img src="${S.avatar}" alt="">` : ""}<b>${esc(S.name)}</b>
+    `<a class="btn ghost tiny" href="trade.html">🔄 Trading Post</a>
+     <div class="who">${S.avatar ? `<img src="${S.avatar}" alt="">` : ""}<b>${esc(S.name)}</b>
      <button class="out" id="outBtn">Sign out</button></div>`;
   $("#outBtn").onclick = signOut;
 

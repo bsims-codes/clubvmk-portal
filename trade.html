@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>CLUBVMK — Trading Post</title>
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="apple-touch-icon" href="favicon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/styles.css" />
+<style>
+  .tw{position:relative;z-index:1;max-width:1120px;margin:0 auto;padding:26px clamp(16px,4vw,44px) 70px}
+  .tw h1{font-family:var(--font-d);font-size:clamp(26px,4vw,36px);margin:0 0 6px}
+  .tw .lede{color:var(--muted);margin:0 0 22px;max-width:62ch}
+
+  /* the two entry points — the whole flow hangs off which one you pick */
+  .modes{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+  .mode{cursor:pointer;font-family:inherit;font-size:14px;font-weight:600;color:var(--muted);
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 18px;
+    display:flex;align-items:center;gap:9px;transition:.15s}
+  .mode:hover{color:var(--ink);border-color:var(--gold)}
+  .mode[aria-selected=true]{color:#2a1e05;background:linear-gradient(180deg,var(--gold-soft),var(--gold));
+    border-color:transparent;box-shadow:0 8px 22px -8px rgba(240,178,60,.55)}
+  .mode small{display:block;font-weight:400;font-size:11.5px;opacity:.8}
+
+  /* breadcrumb of the 3 steps, so you always know where you are */
+  .steps{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px;font-size:12.5px}
+  .steps b{font-weight:600}
+  .step{display:flex;align-items:center;gap:7px;color:var(--faint);background:var(--panel);
+    border:1px solid var(--line);border-radius:99px;padding:6px 13px}
+  .step .n{display:grid;place-items:center;width:18px;height:18px;border-radius:50%;
+    background:var(--panel2);color:var(--faint);font-size:11px;font-weight:700}
+  .step[data-on=true]{color:var(--ink);border-color:rgba(240,178,60,.5)}
+  .step[data-on=true] .n{background:var(--gold);color:#2a1e05}
+  .step[data-done=true]{color:var(--muted)}
+  .step[data-done=true] .n{background:var(--unc);color:#04241a}
+  .steps .sep{color:var(--faint)}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:18px;margin-bottom:16px;box-shadow:var(--shadow)}
+  .card h2{font-family:var(--font-d);font-size:19px;margin:0 0 4px}
+  .card .hint{color:var(--faint);font-size:12.5px;margin:0 0 14px}
+  .card.done{opacity:.72}
+  .card.done:hover{opacity:1}
+
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .grow{flex:1;min-width:210px}
+  .search,.tw select{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:11px;
+    padding:12px 14px;color:var(--ink);font-family:inherit;font-size:14px}
+  .search:focus,.tw select:focus{outline:none;border-color:var(--gold)}
+
+  /* result rows: owners, players */
+  .rows{display:grid;gap:8px;max-height:340px;overflow:auto;margin-top:4px}
+  .pick{display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;
+    font-family:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);
+    border-radius:12px;padding:11px 13px;transition:.14s}
+  .pick:hover{border-color:var(--gold);transform:translateX(2px)}
+  .pick .av{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;flex:none;
+    background:var(--panel2);color:var(--gold-soft);font-weight:700;font-size:14px}
+  .pick .who{display:block;font-weight:600;font-size:14px}
+  .pick .sub{display:block;color:var(--faint);font-size:12px;margin-top:1px}
+  .pick .tail{margin-left:auto;text-align:right;color:var(--muted);font-size:12.5px;flex:none}
+  .pick .tail b{color:var(--gold-soft);font-size:14px}
+
+  /* chosen summary line */
+  .chosen{display:flex;align-items:center;gap:12px;background:var(--bg);border:1px solid var(--line);
+    border-left:3px solid var(--gold);border-radius:12px;padding:10px 13px}
+  .chosen img{width:42px;height:42px;object-fit:contain;flex:none}
+  .chosen .t{font-weight:600;font-size:14px}
+  .chosen .s{color:var(--faint);font-size:12px}
+  .chosen .btn{margin-left:auto}
+
+  .r-leg{color:var(--leg)} .r-epic{color:var(--epic)} .r-rare{color:var(--rare)}
+  .r-uncommon{color:var(--unc)} .r-common{color:var(--com)}
+
+  /* the final offer: your side vs theirs */
+  .deal{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:center;margin:6px 0 16px}
+  @media(max-width:640px){.deal{grid-template-columns:1fr;text-align:center}}
+  .side{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  .side .lbl{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin-bottom:8px}
+  .side img{width:88px;height:88px;object-fit:contain}
+  .side .nm{font-weight:600;font-size:14px;margin-top:6px}
+  .side .rr{font-size:12px;margin-top:2px}
+  .side.empty{border-style:dashed;color:var(--faint);padding:34px 14px}
+  .swap{font-size:24px;color:var(--gold)}
+
+  .muted2{color:var(--faint)}
+  .note{font-size:12.5px;color:var(--faint);margin:12px 0 0}
+  .gate{max-width:520px;margin:14vh auto;text-align:center}
+  .queue{margin-top:8px;display:grid;gap:7px;font-size:13px}
+  .qrow{display:flex;gap:10px;align-items:center;background:var(--bg);border:1px solid var(--line);
+    border-radius:10px;padding:9px 12px}
+  .pill{font-size:11px;padding:2px 9px;border-radius:99px;border:1px solid var(--line);color:var(--muted)}
+  .pill.s-posted{border-color:var(--unc);color:#8fe0bd}
+  .pill.s-pending{border-color:var(--gold);color:var(--gold-soft)}
+  .pill.s-error{border-color:#e06a6a;color:#e8888f}
+</style>
+</head>
+<body>
+<div class="stars" aria-hidden="true"></div>
+<div class="aurora" aria-hidden="true"></div>
+
+<header class="topbar">
+  <a class="brand" href="./">
+    <span class="brand-mark">✦</span>
+    <span class="brand-word">CLUB<em>VMK</em></span>
+    <span class="brand-sub">Trading Post</span>
+  </a>
+  <div id="authSlot" class="auth-slot">
+    <button id="signInBtn" class="btn ghost">Sign in with Discord</button>
+    <button id="signOutBtn" class="btn ghost hidden">Sign out</button>
+  </div>
+</header>
+
+<main class="tw">
+  <div id="gate" class="gate">
+    <h1>🔄 Trading Post</h1>
+    <p class="muted" id="gateMsg">Sign in with Discord to browse trades.</p>
+  </div>
+
+  <div id="panel" class="hidden">
+    <h1>🔄 Trading Post</h1>
+    <p class="lede">Find something you want and offer a swap. Your offer is posted in Discord —
+      the other player still has to hit <b>Accept</b>, so nothing moves without them.</p>
+
+    <div class="modes" role="tablist">
+      <button class="mode" id="mItem" role="tab" aria-selected="true">🔎 Item first
+        <small>find an item → see who has it</small></button>
+      <button class="mode" id="mUser" role="tab" aria-selected="false">👥 Player first
+        <small>pick a player → browse their stuff</small></button>
+    </div>
+
+    <div class="steps" id="steps"></div>
+    <div id="flow"></div>
+
+    <section class="card" id="recentCard">
+      <h2>Your recent offers</h2>
+      <p class="hint">Queued here, posted by the bot in Discord within a few seconds.</p>
+      <div class="queue" id="recent"><span class="muted2">Nothing yet.</span></div>
+    </section>
+  </div>
+</main>
+
+<div id="toast" class="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/trade.js"></script>
+</body>
+</html>
