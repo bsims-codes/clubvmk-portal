@@ -37,7 +37,7 @@ async function render(session) {
 }
 
 /* ---------- announcements ---------- */
-const A = { me: null };
+const A = { me: null, paused: false };
 
 async function loadGuilds() {
   const { data, error } = await sb.rpc("admin_list_players");
@@ -47,8 +47,56 @@ async function loadGuilds() {
   const html = (opts.length ? opts : [["", "— no servers found —"]])
     .map(([id, name]) => `<option value="${esc(id)}">${esc(name)}</option>`).join("")
     + `<option value="">All servers</option>`;
-  // the announcement and vault tools both pick a server the same way
-  for (const sel of [$("#annGuild"), $("#lrGuild")]) if (sel) sel.innerHTML = html;
+  // every tool here picks a server the same way
+  for (const sel of [$("#annGuild"), $("#lrGuild"), $("#pzGuild")]) if (sel) sel.innerHTML = html;
+  // the pause switch is per-server, so it has to re-read when the server changes
+  const pz = $("#pzGuild");
+  if (pz) {
+    pz.value = opts.length ? opts[0][0] : "";
+    pz.onchange = loadPauseState;
+    loadPauseState();
+  }
+}
+
+/* ---------- pause switch ---------- */
+// Reflects `paused` from the profiles mirror; the bot is the source of truth, so
+// the switch always redraws from a fresh read rather than assuming it worked.
+async function loadPauseState() {
+  const gid = $("#pzGuild").value;
+  const btn = $("#pzToggle");
+  btn.disabled = true;
+  let paused = false;
+  try {
+    const { data } = await sb.from("guild_state").select("paused").eq("guild_id", gid).maybeSingle();
+    paused = !!data?.paused;
+  } catch (e) { /* guild_state not created yet — show it as running */ }
+  A.paused = paused;
+  btn.setAttribute("aria-checked", String(paused));
+  btn.disabled = !gid;
+  $("#pzLabel").innerHTML = paused
+    ? `Spawning is <b>paused</b>` : `Spawning is <b>on</b>`;
+}
+
+async function togglePause() {
+  const gid = $("#pzGuild").value;
+  if (!gid) return toast("Pick a server first", true);
+  const next = !A.paused;
+  const btn = $("#pzToggle");
+  btn.disabled = true;
+  const payload = { paused: next, announce: $("#pzAnn").checked };
+  const note = $("#pzNote").value.trim();
+  if (note && payload.announce) payload.note = note;
+  const { error } = await sb.from("admin_actions").insert({
+    action: "pause", discord_id: String(A.me), guild_id: gid,
+    payload, created_by: String(A.me),
+  });
+  if (error) { btn.disabled = false; return toast("Failed: " + error.message, true); }
+  A.paused = next;
+  btn.setAttribute("aria-checked", String(next));
+  $("#pzLabel").innerHTML = next
+    ? `Pausing…` : `Resuming…`;
+  toast(next ? "Pausing spawns…" : "Resuming spawns…");
+  setTimeout(() => { loadPauseState(); loadQueue(); }, 2500);
 }
 
 /* ---------- legendary crate vault ---------- */
@@ -133,6 +181,7 @@ async function boot() {
   $("#signOutBtn").onclick = async (e) => { e.preventDefault(); await sb.auth.signOut(); location.reload(); };
   $("#annSend").onclick = sendAnnouncement;
   $("#lrGo").onclick = openVault;
+  $("#pzToggle").onclick = togglePause;
   sb.auth.onAuthStateChange((_e, s) => render(s));
   const { data } = await sb.auth.getSession();
   render(data.session);

@@ -52,6 +52,21 @@
     background: #0c1020; color: #eef; font: inherit; }
   .ann-box textarea { resize: vertical; margin-bottom: 10px; }
   .chk { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; }
+  .notein { margin-top: 8px; font-size: 13px; }
+
+  /* the pause switch — green/on reads as "the game is running" */
+  .switch-wrap { display: flex; align-items: center; gap: 11px; padding-bottom: 2px; }
+  .switch { cursor: pointer; width: 58px; height: 32px; flex: none; padding: 0;
+    border-radius: 99px; border: 1px solid var(--line); background: #2fa877;
+    position: relative; transition: background .18s; }
+  .switch .knob { position: absolute; top: 3px; left: 3px; width: 24px; height: 24px;
+    border-radius: 50%; background: #fff; transition: transform .18s;
+    box-shadow: 0 2px 6px rgba(0,0,0,.45); }
+  .switch[aria-checked="true"] { background: #3a3f5c; }
+  .switch[aria-checked="true"] .knob { transform: translateX(26px); }
+  .switch:disabled { opacity: .5; cursor: default; }
+  .switch-label { font-size: 13.5px; color: var(--muted); }
+  .switch-label b { color: var(--ink); }
 </style>
 </head>
 <body>
@@ -122,6 +137,28 @@
           <button class="btn gold" id="annSend">Post it</button>
         </div>
         <p class="muted2" id="annHint">Markdown works. Mentions like &lt;@id&gt; and &lt;#id&gt; resolve.</p>
+      </div>
+    </section>
+
+    <section class="status">
+      <h2>⏸️ Spawning</h2>
+      <p class="subtle">Pause new drops server-wide — for maintenance, an event, or a
+        breather. Nothing is lost: queued drops wait, collections are untouched, and
+        trading, profiles and the shop keep working.</p>
+      <div class="ann-box">
+        <div class="ann-row">
+          <label class="fld grow"><span>Server</span>
+            <select id="pzGuild"></select></label>
+          <div class="switch-wrap">
+            <button class="switch" id="pzToggle" role="switch" aria-checked="false">
+              <span class="knob"></span></button>
+            <span id="pzLabel" class="switch-label">Spawning is <b>on</b></span>
+          </div>
+        </div>
+        <label class="chk"><input type="checkbox" id="pzAnn" checked />
+          Announce it in the spawn channel</label>
+        <input id="pzNote" class="notein" type="text" maxlength="300"
+               placeholder="Add a message to the announcement (optional)" />
       </div>
     </section>
 
