@@ -22,6 +22,38 @@ const imgUrl = (f) => CFG.ITEM_IMG_BASE + f;
 const baseItemId = (id) => (id.includes("*") ? id.slice(0, id.lastIndexOf("*")) : id);
 const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 
+/* Only these rarities are public — "hold" and anything else the curator uses
+   internally never appears in a filter or a result list. */
+const PUBLIC_RARITY = new Set(RARITY);
+const CATEGORIES = [["", "All types"], ["pin", "📌 Pins"], ["clothing", "👕 Clothing"]];
+
+/* One filter bar, reused by every list on the page. `onChange` re-runs whatever
+   draw function owns the list; state lives on the returned object. */
+function filterBar(id, onChange) {
+  const f = { cat: "", rar: "" };
+  const html = `<div class="row" style="margin-top:10px">
+      <select id="${id}Cat" style="flex:0 1 160px">
+        ${CATEGORIES.map(([v, l]) => `<option value="${v}">${l}</option>`).join("")}</select>
+      <select id="${id}Rar" style="flex:0 1 170px">
+        <option value="">All rarities</option>
+        ${RARITY.map((r) => `<option value="${r}">${cap(r)}</option>`).join("")}</select>
+    </div>`;
+  const wire = () => {
+    const c = $("#" + id + "Cat"), r = $("#" + id + "Rar");
+    if (!c || !r) return;
+    c.value = f.cat; r.value = f.rar;
+    c.onchange = () => { f.cat = c.value; onChange(); };
+    r.onchange = () => { f.rar = r.value; onChange(); };
+  };
+  // an item passes when it's public AND matches both dropdowns
+  f.ok = (it) => PUBLIC_RARITY.has(it.r)
+    && (!f.cat || it.c === f.cat)
+    && (!f.rar || it.r === f.rar);
+  f.html = html;
+  f.wire = wire;
+  return f;
+}
+
 const T = {
   me: null,
   mode: "item",        // "item" | "user"
@@ -68,8 +100,9 @@ async function loadCatalog() {
     }
     for (const id in T.catalog) T.catalog[id].r = map[baseItemId(id)] || "common";
   } catch (e) { console.warn("overrides load failed:", e.message); }
-  // only nameable, tradeable items are worth searching
-  T.list = Object.values(T.catalog).filter((it) => (it.n || "").trim());
+  // only nameable items in a public rarity are worth searching
+  T.list = Object.values(T.catalog)
+    .filter((it) => (it.n || "").trim() && PUBLIC_RARITY.has(it.r));
 }
 
 /* ---------- little renderers ---------- */
@@ -114,15 +147,18 @@ function renderSteps(active) {
 /* ---------- flow: item first ---------- */
 function itemFirst() {
   const flow = $("#flow");
+  const f = filterBar("if", () => searchItems());
   flow.innerHTML = `
     <section class="card" id="c1">
       <h2>1 · Find the item you want</h2>
       <p class="hint">Search the whole catalogue — then see who's holding one.</p>
       <div class="row"><input class="search grow" id="itemQ" type="text"
         placeholder="Start typing an item name…" autocomplete="off" /></div>
+      ${f.html}
       <div class="rows" id="itemHits"></div>
     </section>`;
   renderSteps(1);
+  f.wire();
   const q = $("#itemQ"), hits = $("#itemHits");
   let timer;
   q.oninput = () => { clearTimeout(timer); timer = setTimeout(searchItems, 140); };
@@ -130,8 +166,11 @@ function itemFirst() {
 
   function searchItems() {
     const s = q.value.trim().toLowerCase();
-    if (s.length < 2) { hits.innerHTML = `<span class="muted2">Type at least 2 letters.</span>`; return; }
-    const found = T.list.filter((it) => it.n.toLowerCase().includes(s))
+    if (s.length < 2 && !f.cat && !f.rar) {
+      hits.innerHTML = `<span class="muted2">Type at least 2 letters, or filter above.</span>`;
+      return;
+    }
+    const found = T.list.filter((it) => f.ok(it) && (!s || it.n.toLowerCase().includes(s)))
       .sort((a, b) => RARITY.indexOf(a.r) - RARITY.indexOf(b.r) || a.n.localeCompare(b.n))
       .slice(0, 40);
     if (!found.length) { hits.innerHTML = `<span class="muted2">No item matches that.</span>`; return; }
@@ -213,6 +252,7 @@ async function userFirst() {
 async function browseInventory(player) {
   renderSteps(2);
   const flow = $("#flow");
+  const theirFilter = filterBar("th", () => draw());
   flow.innerHTML = `
     <section class="card done">
       <div class="chosen"><span class="av" style="display:grid;place-items:center;width:42px;
@@ -226,8 +266,10 @@ async function browseInventory(player) {
       <p class="hint">Their collection, rarest first.</p>
       <div class="row"><input class="search grow" id="invQ" type="text"
         placeholder="Filter their items…" autocomplete="off" /></div>
+      ${theirFilter.html}
       <div class="rows" id="theirs"><span class="muted2">Loading inventory…</span></div></section>`;
   $("#backUsers").onclick = userFirst;
+  theirFilter.wire();
 
   const { data, error } = await sb.rpc("trade_inventory", {
     p_discord_id: player.discord_id, p_guild_id: player.guild_id });
@@ -244,8 +286,9 @@ async function browseInventory(player) {
   draw();
 
   function draw() {
-    const s = (q.value || "").trim().toLowerCase();
-    const rows = T.theirInv.filter((r) => !s || (r.item.n || "").toLowerCase().includes(s));
+    const s = ($("#invQ")?.value || "").trim().toLowerCase();
+    const rows = T.theirInv.filter((r) => theirFilter.ok(r.item)
+      && (!s || (r.item.n || "").toLowerCase().includes(s)));
     if (!rows.length) { box.innerHTML = `<span class="muted2">Nothing matches that.</span>`; return; }
     box.innerHTML = "";
     for (const r of rows.slice(0, 300)) {
@@ -268,6 +311,7 @@ async function offerStep() {
   T.give = null;
   const back = T.mode === "item" ? () => chooseOwnerFor(T.want) : () => browseInventory(T.owner);
   const flow = $("#flow");
+  const mineFilter = filterBar("mi", () => draw());
   flow.innerHTML = `
     <section class="card done" id="cWant"></section>
     <section class="card">
@@ -275,10 +319,12 @@ async function offerStep() {
       <p class="hint">From your collection in ${esc(T.owner.guild_name)}.</p>
       <div class="row"><input class="search grow" id="mineQ" type="text"
         placeholder="Filter your items…" autocomplete="off" /></div>
+      ${mineFilter.html}
       <div class="rows" id="mine"><span class="muted2">Loading your inventory…</span></div>
     </section>
     <section class="card" id="dealCard"></section>`;
   $("#cWant").appendChild(chosenRow(T.want, `from ${T.owner.display_name}`, back));
+  mineFilter.wire();
   drawDeal();
 
   // your own inventory in that same server (RLS already scopes this to you)
@@ -299,8 +345,9 @@ async function offerStep() {
   draw();
 
   function draw() {
-    const s = (q.value || "").trim().toLowerCase();
-    const rows = mine.filter((r) => !s || (r.item.n || "").toLowerCase().includes(s));
+    const s = ($("#mineQ")?.value || "").trim().toLowerCase();
+    const rows = mine.filter((r) => mineFilter.ok(r.item)
+      && (!s || (r.item.n || "").toLowerCase().includes(s)));
     if (!rows.length) { box.innerHTML = `<span class="muted2">Nothing matches that.</span>`; return; }
     box.innerHTML = "";
     for (const r of rows.slice(0, 300)) {
