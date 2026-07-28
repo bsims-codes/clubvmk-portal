@@ -49,6 +49,7 @@ const S = {
   draft: { theme: CFG.DEFAULT_THEME, accent_color: null, featured: [], bio: "" },
   saved: null,           // JSON snapshot of last-saved draft
   invPage: 0, invSearch: "", invRarity: "all", invCat: "all", invSort: "rarity_desc",
+  invDupes: false,       // show only stacks you hold 2+ of
 };
 const PER = 24;
 
@@ -143,7 +144,8 @@ async function render(session) {
   S.avatar = m.avatar_url || m.picture || ident.identity_data?.avatar_url || ident.identity_data?.picture || null;
 
   $("#authSlot").innerHTML =
-    `<a class="btn ghost tiny" href="trade.html">🔄 Trading Post</a>
+    `<a class="btn ghost tiny" href="remy.html">🐀 Remy's Kitchen</a>
+     <a class="btn ghost tiny" href="trade.html">🔄 Trading Post</a>
      <div class="who">${S.avatar ? `<img src="${S.avatar}" alt="">` : ""}<b>${esc(S.name)}</b>
      <button class="out" id="outBtn">Sign out</button></div>`;
   $("#outBtn").onclick = signOut;
@@ -269,6 +271,9 @@ function wireEditor() {
   $("#invSearch").oninput = (e) => { S.invSearch = e.target.value.toLowerCase(); S.invPage = 0; renderInv(); };
   const sort = $("#invSort"); sort.value = S.invSort;
   sort.onchange = (e) => { S.invSort = e.target.value; S.invPage = 0; renderInv(); };
+  const dup = $("#invDupes");
+  dup.checked = S.invDupes;
+  dup.onchange = (e) => { S.invDupes = e.target.checked; S.invPage = 0; renderInv(); };
 }
 
 /* ---------- render everything ---------- */
@@ -422,6 +427,7 @@ function filteredInv() {
     .map((r) => ({ ...r, it: S.catalog[r.item_id] || unknownItem(r.item_id) }))
     .filter((r) => S.invRarity === "all" || r.it.r === S.invRarity)
     .filter((r) => S.invCat === "all" || r.it.c === S.invCat)
+    .filter((r) => !S.invDupes || r.count > 1)
     .filter((r) => nameMatches(r.it.n, S.invSearch));
   const byName = (a, b) => a.it.n.localeCompare(b.it.n);
   const rIdx = (x) => RARITY.indexOf(x.it.r);
@@ -431,6 +437,7 @@ function filteredInv() {
     az: byName,
     za: (a, b) => byName(b, a),
     copies_desc: (a, b) => b.count - a.count || byName(a, b),
+    copies_asc: (a, b) => a.count - b.count || byName(a, b),
   };
   return list.sort(sorts[S.invSort] || sorts.rarity_desc);
 }
