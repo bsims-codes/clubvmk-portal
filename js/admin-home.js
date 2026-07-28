@@ -59,22 +59,40 @@ async function loadGuilds() {
 }
 
 /* ---------- pause switch ---------- */
-// Reflects `paused` from the profiles mirror; the bot is the source of truth, so
-// the switch always redraws from a fresh read rather than assuming it worked.
+// The bot owns this state and only mirrors it after its queue loop picks the
+// action up (~6s), so the switch never reports success from the click alone —
+// it polls guild_state until the bot agrees, and says "applying…" until then.
+async function readPaused(gid) {
+  const { data, error } = await sb.from("guild_state")
+    .select("paused").eq("guild_id", gid).maybeSingle();
+  if (error) return null;         // table missing, or no read access
+  return data ? !!data.paused : false;   // no row yet = the bot has never paused it
+}
+
+function paintPause(paused, pending) {
+  const btn = $("#pzToggle"), lbl = $("#pzLabel");
+  // aria-checked tracks SPAWNING (on = checked), so knob-right/green reads as
+  // "running" the way a switch labelled "Spawning" should
+  btn.setAttribute("aria-checked", String(!paused));
+  lbl.innerHTML = pending
+    ? `<span class="muted2">applying…</span>`
+    : (paused ? `Spawning is <b>paused</b>` : `Spawning is <b>on</b>`);
+}
+
 async function loadPauseState() {
   const gid = $("#pzGuild").value;
   const btn = $("#pzToggle");
-  btn.disabled = true;
-  let paused = false;
-  try {
-    const { data } = await sb.from("guild_state").select("paused").eq("guild_id", gid).maybeSingle();
-    paused = !!data?.paused;
-  } catch (e) { /* guild_state not created yet — show it as running */ }
+  if (!gid) { btn.disabled = true; return; }
+  const paused = await readPaused(gid);
+  if (paused === null) {
+    btn.disabled = true;
+    $("#pzLabel").innerHTML =
+      `<span class="muted2">Run <code>webportal/schema_guild_state.sql</code> to enable this.</span>`;
+    return;
+  }
   A.paused = paused;
-  btn.setAttribute("aria-checked", String(paused));
-  btn.disabled = !gid;
-  $("#pzLabel").innerHTML = paused
-    ? `Spawning is <b>paused</b>` : `Spawning is <b>on</b>`;
+  btn.disabled = false;
+  paintPause(paused, false);
 }
 
 async function togglePause() {
@@ -91,12 +109,26 @@ async function togglePause() {
     payload, created_by: String(A.me),
   });
   if (error) { btn.disabled = false; return toast("Failed: " + error.message, true); }
-  A.paused = next;
-  btn.setAttribute("aria-checked", String(next));
-  $("#pzLabel").innerHTML = next
-    ? `Pausing…` : `Resuming…`;
+  paintPause(next, true);
   toast(next ? "Pausing spawns…" : "Resuming spawns…");
-  setTimeout(() => { loadPauseState(); loadQueue(); }, 2500);
+
+  // poll until the bot's mirror matches what we asked for — a single early read
+  // lands before the queue loop has run and would show the stale value
+  for (let i = 0; i < 10; i++) {
+    await new Promise((r) => setTimeout(r, 1500));
+    const now = await readPaused(gid);
+    if (now === next) {
+      A.paused = now;
+      btn.disabled = false;
+      paintPause(now, false);
+      loadQueue();
+      return;
+    }
+  }
+  // the bot never confirmed — show what's actually true, not what we hoped
+  await loadPauseState();
+  loadQueue();
+  toast("The bot hasn't confirmed that yet — check it's running.", true);
 }
 
 /* ---------- legendary crate vault ---------- */

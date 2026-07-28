@@ -54,15 +54,15 @@
   .chk { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; }
   .notein { margin-top: 8px; font-size: 13px; }
 
-  /* the pause switch — green/on reads as "the game is running" */
+  /* aria-checked tracks SPAWNING: checked = running = green, knob right */
   .switch-wrap { display: flex; align-items: center; gap: 11px; padding-bottom: 2px; }
   .switch { cursor: pointer; width: 58px; height: 32px; flex: none; padding: 0;
-    border-radius: 99px; border: 1px solid var(--line); background: #2fa877;
+    border-radius: 99px; border: 1px solid var(--line); background: #3a3f5c;
     position: relative; transition: background .18s; }
   .switch .knob { position: absolute; top: 3px; left: 3px; width: 24px; height: 24px;
     border-radius: 50%; background: #fff; transition: transform .18s;
     box-shadow: 0 2px 6px rgba(0,0,0,.45); }
-  .switch[aria-checked="true"] { background: #3a3f5c; }
+  .switch[aria-checked="true"] { background: #2fa877; }
   .switch[aria-checked="true"] .knob { transform: translateX(26px); }
   .switch:disabled { opacity: .5; cursor: default; }
   .switch-label { font-size: 13.5px; color: var(--muted); }
@@ -150,9 +150,10 @@
           <label class="fld grow"><span>Server</span>
             <select id="pzGuild"></select></label>
           <div class="switch-wrap">
-            <button class="switch" id="pzToggle" role="switch" aria-checked="false">
+            <button class="switch" id="pzToggle" role="switch" aria-checked="true"
+                    aria-label="Spawning" disabled>
               <span class="knob"></span></button>
-            <span id="pzLabel" class="switch-label">Spawning is <b>on</b></span>
+            <span id="pzLabel" class="switch-label"><span class="muted2">checking…</span></span>
           </div>
         </div>
         <label class="chk"><input type="checkbox" id="pzAnn" checked />
