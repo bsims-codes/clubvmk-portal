@@ -323,6 +323,43 @@ body.dragging-item .featured-row .fslot:not(.filled){border-color:var(--gold-sof
 .ctx-item.danger:hover{background:rgba(224,106,106,.14)}
 .ctx-sub{color:var(--faint);font-size:11.5px;flex:none}
 
+/* ── charts (js/charts.js) ─────────────────────────────────────────────────
+   Marks carry colour; every label here stays in an ink token. Grid and axes
+   sit well below the data. */
+.ch{display:block;width:100%;overflow:visible}
+.ch-grid{stroke:rgba(150,165,230,.13);stroke-width:1}
+.ch-axis{fill:var(--faint);font-size:10.5px;font-family:var(--font-b);font-variant-numeric:tabular-nums}
+.ch-cross{stroke:rgba(150,165,230,.42);stroke-width:1;stroke-dasharray:3 3}
+.ch-empty{color:var(--faint);font-size:13px;margin:14px 2px}
+.ch-tip{position:fixed;z-index:80;pointer-events:none;opacity:0;transition:opacity .1s;
+  background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:7px 10px;
+  box-shadow:var(--shadow);font-size:12.5px;line-height:1.45;max-width:240px}
+.ch-tip.on{opacity:1}
+.ch-tip b{display:block;color:var(--ink);font-weight:600}
+.ch-tip span{display:block;color:var(--muted);font-variant-numeric:tabular-nums}
+.ch-tip span.s{color:var(--faint);font-size:11.5px}
+
+/* horizontal bars: square at the baseline, 4px rounded data-end */
+.ch-bar{display:grid;grid-template-columns:minmax(88px,150px) 1fr 54px;gap:11px;align-items:center;
+  padding:3px 4px;border-radius:6px}
+.ch-bar+.ch-bar{margin-top:2px}
+.ch-bar:hover{background:rgba(150,165,230,.07)}
+.ch-bar-name{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ch-bar-track{height:14px;background:rgba(150,165,230,.07);border-radius:4px}
+.ch-bar-fill{display:block;height:100%;border-radius:0 4px 4px 0}
+.ch-bar-val{font-size:12.5px;text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+
+/* weekday × hour heatmap */
+.ch-heat{display:grid;gap:2px;align-items:center}
+.ch-heat-cell{height:16px;border-radius:3px}
+.ch-heat-cell.zero{background:rgba(150,165,230,.05)}
+.ch-heat-cell:hover{outline:2px solid var(--gold);outline-offset:-1px}
+.ch-heat-row{font-size:11px;color:var(--faint);padding-right:8px;text-align:right}
+.ch-heat-col{font-size:10px;color:var(--faint);text-align:center}
+.ch-key{display:flex;align-items:center;gap:5px;margin-top:10px;font-size:11px;color:var(--faint)}
+.ch-key i{width:16px;height:9px;border-radius:2px;display:block}
+.ch-key-max{margin-left:auto}
+
 /* toast */
 .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);z-index:50;
   background:var(--panel2);border:1px solid var(--gold);color:var(--ink);padding:12px 20px;border-radius:12px;
