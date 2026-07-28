@@ -61,6 +61,10 @@
   .grow { flex: 1; min-width: 200px; }
   .ann { display: flex; align-items: center; gap: 7px; margin-top: 10px;
          font-size: 12.5px; color: var(--muted); cursor: pointer; }
+  /* optional line appended to the public announcement — dimmed while the
+     announce box above it is unticked, since it does nothing on its own */
+  .notein { width: 100%; margin-top: 7px; font-size: 12.5px; }
+  .notein:disabled { opacity: .4; cursor: not-allowed; }
   .muted2 { color: var(--faint); }
   .hintline { font-size: 11.5px; color: var(--faint); margin-top: 7px; }
 </style>

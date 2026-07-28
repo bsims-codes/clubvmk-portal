@@ -198,6 +198,8 @@ function renderDetail() {
         </div>
         <label class="ann"><input type="checkbox" id="rfAnn" checked /> Announce in the server
           <span class="muted2">— keeps the correction transparent</span></label>
+        <input id="rfNote" class="notein" type="text" maxlength="300"
+               placeholder="Add a message to the announcement (optional)" />
       </div>
 
       <div class="tool">
@@ -212,6 +214,8 @@ function renderDetail() {
           <button class="btn danger" id="giTake">Take</button>
         </div>
         <label class="ann"><input type="checkbox" id="giAnn" /> Announce in the server</label>
+        <input id="giNote" class="notein" type="text" maxlength="300"
+               placeholder="Add a message to the announcement (optional)" />
       </div>
 
       <div class="tool">
@@ -226,6 +230,8 @@ function renderDetail() {
           <button class="btn" id="cGo">Apply</button>
         </div>
         <label class="ann"><input type="checkbox" id="cAnn" /> Announce in the server</label>
+        <input id="cNote" class="notein" type="text" maxlength="300"
+               placeholder="Add a message to the announcement (optional)" />
       </div>
 
       <div class="tool">
@@ -237,6 +243,8 @@ function renderDetail() {
           <button class="btn danger" id="thRevoke">Revoke</button>
         </div>
         <label class="ann"><input type="checkbox" id="thAnn" checked /> Announce in the server</label>
+        <input id="thNote" class="notein" type="text" maxlength="300"
+               placeholder="Add a message to the announcement (optional)" />
       </div>
 
       <div class="tool">
@@ -262,6 +270,17 @@ function renderDetail() {
   const v = (id) => $("#" + id).value.trim();
   const n = (id) => Number($("#" + id).value || 0);
   const ann = (id) => $("#" + id).checked;      // announce publicly in Discord?
+  // free-text line quoted under the standard announcement wording; only sent
+  // when that action is actually being announced
+  const note = (annId, id) => (ann(annId) ? v(id) : "");
+  // the note only does anything alongside a tick, so mirror the checkbox state
+  for (const [a, nId] of [["rfAnn", "rfNote"], ["giAnn", "giNote"],
+                          ["cAnn", "cNote"], ["thAnn", "thNote"]]) {
+    const box = $("#" + a), input = $("#" + nId);
+    const sync = () => { input.disabled = !box.checked; };
+    box.addEventListener("change", sync);
+    sync();
+  }
   // the inputs hold friendly names — turn them back into ids before queueing
   const itemFrom = (inputId, pool) => {
     const raw = v(inputId);
@@ -273,27 +292,33 @@ function renderDetail() {
   $("#rfGo").onclick = () => {
     const id = itemFrom("rfItem", ownedPool); if (!id) return;
     queueAction("refund", { item_id: id, qty: n("rfQty") || 1,
-                            coins: n("rfCoins"), announce: ann("rfAnn") },
+                            coins: n("rfCoins"), announce: ann("rfAnn"),
+                            note: note("rfAnn", "rfNote") },
                 `refund ${P.catalog[id]?.n || id}`);
   };
   $("#giGive").onclick = () => {
     const id = itemFrom("giItem", allPool); if (!id) return;
-    queueAction("give", { item_id: id, qty: n("giQty") || 1, announce: ann("giAnn") },
+    queueAction("give", { item_id: id, qty: n("giQty") || 1, announce: ann("giAnn"),
+                          note: note("giAnn", "giNote") },
                 `give ${P.catalog[id]?.n || id}`);
   };
   $("#giTake").onclick = () => {
     const id = itemFrom("giItem", allPool); if (!id) return;
-    queueAction("take", { item_id: id, qty: n("giQty") || 1, announce: ann("giAnn") },
+    queueAction("take", { item_id: id, qty: n("giQty") || 1, announce: ann("giAnn"),
+                          note: note("giAnn", "giNote") },
                 `take ${P.catalog[id]?.n || id}`);
   };
   $("#cGo").onclick = () => n("cAmt")
-    ? queueAction("coins", { kind: v("cKind"), amount: n("cAmt"), announce: ann("cAnn") },
+    ? queueAction("coins", { kind: v("cKind"), amount: n("cAmt"), announce: ann("cAnn"),
+                             note: note("cAnn", "cNote") },
                   `${v("cKind")} ${n("cAmt")}`)
     : toast("Enter a non-zero amount", true);
-  $("#thGrant").onclick = () => queueAction("theme", { theme: v("thKey"), announce: ann("thAnn") },
+  $("#thGrant").onclick = () => queueAction("theme", { theme: v("thKey"), announce: ann("thAnn"),
+                                                       note: note("thAnn", "thNote") },
                                             `grant ${v("thKey")}`);
   $("#thRevoke").onclick = () => queueAction("theme", { theme: v("thKey"), revoke: true,
-                                                        announce: ann("thAnn") },
+                                                        announce: ann("thAnn"),
+                                                        note: note("thAnn", "thNote") },
                                              `revoke ${v("thKey")}`);
   $("#cdGo").onclick = () => queueAction("cooldown", { key: v("cdKey") || "all" },
                                          `clear ${v("cdKey") || "all"}`);
