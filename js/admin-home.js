@@ -40,14 +40,31 @@ async function render(session) {
 const A = { me: null };
 
 async function loadGuilds() {
-  const sel = $("#annGuild");
   const { data, error } = await sb.rpc("admin_list_players");
   const seen = {};
   for (const r of (error ? [] : data || [])) seen[r.guild_id] = r.guild_name || r.guild_id;
   const opts = Object.entries(seen);
-  sel.innerHTML = (opts.length ? opts : [["", "— no servers found —"]])
+  const html = (opts.length ? opts : [["", "— no servers found —"]])
     .map(([id, name]) => `<option value="${esc(id)}">${esc(name)}</option>`).join("")
     + `<option value="">All servers</option>`;
+  // the announcement and vault tools both pick a server the same way
+  for (const sel of [$("#annGuild"), $("#lrGuild")]) if (sel) sel.innerHTML = html;
+}
+
+/* ---------- legendary crate vault ---------- */
+async function openVault() {
+  const mins = Number($("#lrMins").value || 0);
+  if (!(mins >= 1 && mins <= 60)) return toast("Pick 1–60 minutes", true);
+  const payload = { minutes: mins, host: "the CLUBVMK crew" };
+  const ch = $("#lrChannel").value.trim();
+  if (ch) payload.channel_id = ch;
+  const { error } = await sb.from("admin_actions").insert({
+    action: "legendary_rush", discord_id: String(A.me),
+    guild_id: $("#lrGuild").value || null, payload, created_by: String(A.me),
+  });
+  if (error) return toast("Failed: " + error.message, true);
+  toast(`Queued — the vault opens for ${mins} min within a few seconds.`);
+  setTimeout(loadQueue, 2500);
 }
 
 async function sendAnnouncement() {
@@ -111,6 +128,7 @@ async function boot() {
   });
   $("#signOutBtn").onclick = async (e) => { e.preventDefault(); await sb.auth.signOut(); location.reload(); };
   $("#annSend").onclick = sendAnnouncement;
+  $("#lrGo").onclick = openVault;
   sb.auth.onAuthStateChange((_e, s) => render(s));
   const { data } = await sb.auth.getSession();
   render(data.session);
