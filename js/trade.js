@@ -410,11 +410,77 @@ async function sendOffer() {
   setTimeout(loadRecent, 4000);
 }
 
+/* ---------- incoming offers (you're the target) ---------- */
+async function loadInbox() {
+  const box = $("#inbox"), count = $("#inboxCount");
+  const { data, error } = await sb.rpc("trade_incoming");
+  if (error) {
+    // the migration hasn't been run yet — say so instead of failing silently
+    box.innerHTML = `<span class="muted2">Inbox unavailable — run
+      <code>webportal/schema_trade_incoming.sql</code> in Supabase.</span>`;
+    count.textContent = "";
+    return;
+  }
+  const live = (data || []).filter((r) => r.status === "posted" && !r.decision);
+  count.textContent = live.length ? `${live.length} waiting` : "";
+  count.className = "pill" + (live.length ? " s-pending" : "");
+  if (!data?.length) { box.innerHTML = `<span class="muted2">Nothing waiting.</span>`; return; }
+
+  box.innerHTML = "";
+  for (const r of data.slice(0, 12)) {
+    // they give you `give_item`; you give them `receive_item`
+    const theirs = T.catalog[r.give_item], yours = T.catalog[r.receive_item];
+    const el = document.createElement("div");
+    const answered = r.decision || r.status !== "posted";
+    el.className = answered ? "qrow" : "offer";
+    if (answered) {
+      const label = r.decision && r.status === "posted" ? "sending…" : r.status;
+      el.innerHTML = `<span class="pill s-${esc(r.status)}">${esc(label)}</span>
+        <span>From <b>${esc(r.proposer_name)}</b>: <b>${esc(theirs?.n || r.give_item)}</b>
+          ⇄ <b>${esc(yours?.n || r.receive_item)}</b></span>`;
+      box.appendChild(el);
+      continue;
+    }
+    el.innerHTML = `
+      <span class="from"><b>${esc(r.proposer_name)}</b> · ${esc(r.guild_name)}</span>
+      <span class="leg"><img src="${imgUrl(theirs?.img || "")}" alt="" loading="lazy" />
+        <span><span class="lb">You get</span>${esc(theirs?.n || r.give_item)}</span></span>
+      <span class="swap" style="font-size:18px">⇄</span>
+      <span class="leg"><img src="${imgUrl(yours?.img || "")}" alt="" loading="lazy" />
+        <span><span class="lb">You give</span>${esc(yours?.n || r.receive_item)}</span></span>
+      <span class="acts">
+        <button class="btn tiny good">Accept</button>
+        <button class="btn tiny bad">Decline</button></span>`;
+    const [acc, dec] = el.querySelectorAll("button");
+    acc.onclick = () => answer(r, "accept", el);
+    dec.onclick = () => answer(r, "decline", el);
+    box.appendChild(el);
+  }
+}
+
+async function answer(offer, decision, el) {
+  el.querySelectorAll("button").forEach((b) => (b.disabled = true));
+  // the portal only records the decision — the bot does the swap
+  const { error } = await sb.from("trade_offers")
+    .update({ decision, decided_at: new Date().toISOString() })
+    .eq("id", offer.id);
+  if (error) {
+    el.querySelectorAll("button").forEach((b) => (b.disabled = false));
+    return toast("Couldn't answer: " + error.message, true);
+  }
+  toast(decision === "accept"
+    ? "Accepted — the bot is making the swap now."
+    : "Declined.");
+  loadInbox();
+  setTimeout(loadInbox, 4000);
+}
+
 /* ---------- your recent offers ---------- */
 async function loadRecent() {
   const box = $("#recent");
   const { data, error } = await sb.from("trade_offers")
     .select("give_item,receive_item,status,result,created_at,target_id,proposer_id")
+    .eq("proposer_id", String(T.me))
     .order("created_at", { ascending: false }).limit(8);
   if (error || !data?.length) {
     box.innerHTML = `<span class="muted2">Nothing yet.</span>`;
@@ -422,11 +488,10 @@ async function loadRecent() {
   }
   box.innerHTML = data.map((r) => {
     const g = T.catalog[r.give_item], w = T.catalog[r.receive_item];
-    const mine = String(r.proposer_id) === String(T.me);
-    const dir = mine ? "You offered" : "Offered to you:";
     return `<div class="qrow">
       <span class="pill s-${esc(r.status)}">${esc(r.status)}</span>
-      <span>${dir} <b>${esc(g?.n || r.give_item)}</b> ⇄ <b>${esc(w?.n || r.receive_item)}</b></span>
+      <span>You offered <b>${esc(g?.n || r.give_item)}</b>
+        ⇄ <b>${esc(w?.n || r.receive_item)}</b></span>
       <span class="muted2" style="margin-left:auto">${esc(r.result || "")}</span>
     </div>`;
   }).join("");
@@ -452,6 +517,7 @@ async function render(session) {
   }
   $("#gate").classList.add("hidden"); $("#panel").classList.remove("hidden");
   setMode(T.mode);
+  loadInbox();
   loadRecent();
 }
 

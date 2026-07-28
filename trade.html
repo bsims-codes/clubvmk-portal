@@ -96,6 +96,21 @@
   .pill.s-posted{border-color:var(--unc);color:#8fe0bd}
   .pill.s-pending{border-color:var(--gold);color:var(--gold-soft)}
   .pill.s-error{border-color:#e06a6a;color:#e8888f}
+  .pill.s-accepted{border-color:var(--unc);color:#8fe0bd}
+  .pill.s-declined{border-color:var(--line);color:var(--faint)}
+
+  /* incoming offer: what you'd give vs get, then the two answers */
+  .offer{display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:var(--bg);
+    border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:12px;padding:11px 13px}
+  .offer .from{font-size:12.5px;color:var(--muted);width:100%}
+  .offer .from b{color:var(--ink)}
+  .offer .leg{display:flex;align-items:center;gap:8px;font-size:13px}
+  .offer .leg img{width:34px;height:34px;object-fit:contain}
+  .offer .leg .lb{display:block;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--faint)}
+  .offer .acts{margin-left:auto;display:flex;gap:8px}
+  .btn.good{background:linear-gradient(180deg,#5fd3a4,#2fa877);color:#04241a;border:none}
+  .btn.bad{background:transparent;border-color:rgba(224,106,106,.5);color:#e8888f}
 </style>
 </head>
 <body>
@@ -135,8 +150,15 @@
     <div class="steps" id="steps"></div>
     <div id="flow"></div>
 
+    <section class="card" id="inboxCard">
+      <h2>📥 Incoming offers <span class="pill" id="inboxCount"></span></h2>
+      <p class="hint">Offers other players sent you. Accepting here does the same
+        swap as the buttons in Discord.</p>
+      <div class="queue" id="inbox"><span class="muted2">Nothing waiting.</span></div>
+    </section>
+
     <section class="card" id="recentCard">
-      <h2>Your recent offers</h2>
+      <h2>Offers you sent</h2>
       <p class="hint">Queued here, posted by the bot in Discord within a few seconds.</p>
       <div class="queue" id="recent"><span class="muted2">Nothing yet.</span></div>
     </section>
