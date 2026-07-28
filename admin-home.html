@@ -114,6 +114,10 @@
         <div class="ann-row">
           <label class="fld grow"><span>Embed title <em>(optional)</em></span>
             <input id="annTitle" type="text" placeholder="Leave blank for a plain message" /></label>
+          <label class="fld grow"><span>Ping role id <em>(blank = no ping)</em></span>
+            <input id="annPing" type="text" placeholder="e.g. 1531376611180417044" /></label>
+        </div>
+        <div class="ann-row">
           <label class="chk"><input type="checkbox" id="annEmbed" /> Send as an embed</label>
           <button class="btn gold" id="annSend">Post it</button>
         </div>
@@ -133,6 +137,11 @@
             <input id="lrChannel" type="text" placeholder="e.g. 1527854586579390567" /></label>
           <label class="fld"><span>Minutes open</span>
             <input id="lrMins" type="number" value="5" min="1" max="60" /></label>
+        </div>
+        <div class="ann-row">
+          <label class="fld grow"><span>Ping role id <em>(blank = no ping)</em></span>
+            <input id="lrPing" type="text" value="1531376611180417044"
+                   placeholder="e.g. 1531376611180417044" /></label>
           <button class="btn gold" id="lrGo">Open the vault</button>
         </div>
         <p class="muted2">Every claim is a random legendary from the live catalogue. The post

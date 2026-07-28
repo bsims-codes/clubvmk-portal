@@ -58,6 +58,8 @@ async function openVault() {
   const payload = { minutes: mins, host: "the CLUBVMK crew" };
   const ch = $("#lrChannel").value.trim();
   if (ch) payload.channel_id = ch;
+  const ping = $("#lrPing").value.trim();
+  if (ping) payload.ping_role = ping;
   const { error } = await sb.from("admin_actions").insert({
     action: "legendary_rush", discord_id: String(A.me),
     guild_id: $("#lrGuild").value || null, payload, created_by: String(A.me),
@@ -76,6 +78,8 @@ async function sendAnnouncement() {
   if (ch) payload.channel_id = ch;
   const title = $("#annTitle").value.trim();
   if (title) payload.title = title;
+  const ping = $("#annPing").value.trim();
+  if (ping) payload.ping_role = ping;
   const { error } = await sb.from("admin_actions").insert({
     action: "announce", discord_id: String(A.me), guild_id: guild,
     payload, created_by: String(A.me),
