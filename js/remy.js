@@ -14,12 +14,7 @@ const CFG = window.CLUBVMK;
 const sb = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY);
 const $ = (s) => document.querySelector(s);
 const NEED = CFG.REMY_NEED || 3;
-const ODDS = CFG.REMY_ODDS || { uncommon: 75, rare: 20, epic: 4, legendary: 1 };
 const PER = 60;                       // items per page in the picker
-const RARITY_COLOR = {
-  legendary: "var(--leg)", epic: "var(--epic)", rare: "var(--rare)",
-  uncommon: "var(--unc)", common: "var(--com)",
-};
 const UPGRADE_LINE = {
   rare: "✨ A pinch of something special!",
   epic: "🌟 Remy outdid himself!",
@@ -200,20 +195,6 @@ function renderPot() {
     : R.pot.length === NEED ? "🍳 Cook!" : `🍳 Cook! (${R.pot.length}/${NEED})`;
 }
 
-function renderOdds() {
-  if (!$("#odds")) return;
-  const total = Object.values(ODDS).reduce((a, b) => a + b, 0) || 1;
-  $("#odds").innerHTML = `<div class="muted2" style="font-size:11.5px;letter-spacing:.14em;
-      text-transform:uppercase;margin-bottom:2px">Out of the pot</div>` +
-    Object.entries(ODDS).map(([r, w]) => {
-      const pct = (100 * w) / total;
-      const txt = pct >= 10 ? pct.toFixed(0) : String(+pct.toFixed(1));
-      return `<div class="odd"><span class="dot" style="background:${RARITY_COLOR[r]}"></span>
-        ${cap(r)}<span class="bar"><i style="width:${Math.max(3, pct)}%;
-        background:${RARITY_COLOR[r]}"></i></span><b>${txt}%</b></div>`;
-    }).join("");
-}
-
 /* ---------- render: the picker grid ---------- */
 function renderGrid() {
   const all = commons();
@@ -322,10 +303,8 @@ async function cook() {
 function restorePot() {
   $("#potBody").innerHTML = `<div class="pot" id="potSlots"></div>
     <p class="potnames" id="potNames"></p>
-    <button class="btn gold cookbtn" id="cookBtn">🍳 Cook!</button>
-    <div class="odds" id="odds"></div>`;
+    <button class="btn gold cookbtn" id="cookBtn">🍳 Cook!</button>`;
   $("#cookBtn").onclick = cook;
-  renderOdds();
   renderAll();
 }
 
@@ -401,7 +380,6 @@ async function render(session) {
   }
   $("#gate").classList.add("hidden"); $("#panel").classList.remove("hidden");
   $("#needN").textContent = String(NEED);
-  renderOdds();
   await loadInv();
   renderTypeFilter();
   loadRecent();
