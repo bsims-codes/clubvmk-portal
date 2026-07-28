@@ -15,6 +15,12 @@ const sb = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY)
 const $ = (s) => document.querySelector(s);
 const NEED = CFG.REMY_NEED || 3;
 const PER = 60;                       // items per page in the picker
+const RARITY = ["legendary", "epic", "rare", "uncommon", "common"];
+// rare-or-better is worth an "are you sure?" — what goes in never changes the roll
+const PRECIOUS = new Set(["rare", "epic", "legendary"]);
+const RARITY_DOT = {
+  legendary: "🟠", epic: "🟣", rare: "🔵", uncommon: "🟢", common: "⚪",
+};
 const UPGRADE_LINE = {
   rare: "✨ A pinch of something special!",
   epic: "🌟 Remy outdid himself!",
@@ -47,7 +53,7 @@ const R = {
   guild: null,
   inv: {},               // item_id -> count, current guild
   pot: [],               // chosen item_ids (length <= NEED)
-  page: 0, q: "", cat: "all", sort: "copies_desc", dupOnly: false,
+  page: 0, q: "", cat: "all", rar: "all", sort: "copies_desc", dupOnly: false,
   busy: false,
 };
 
@@ -125,21 +131,25 @@ async function loadInv() {
   renderAll();
 }
 
-/* Everything cookable: commons the player owns, after search/type/dupe filters. */
-function commons() {
+/* Everything cookable — any rarity you own — after the search/filter controls. */
+function pickable() {
   const out = [];
   for (const id in R.inv) {
     const it = R.catalog[id];
-    if (!it || it.r !== "common") continue;
+    if (!it) continue;
     if (R.dupOnly && R.inv[id] < 2) continue;
     if (R.cat !== "all" && it.c !== R.cat) continue;
+    if (R.rar !== "all" && it.r !== R.rar) continue;
     if (!nameMatches(it.n, R.q)) continue;
     out.push({ id, count: R.inv[id], it });
   }
   const byName = (a, b) => a.it.n.localeCompare(b.it.n);
+  const rIdx = (x) => RARITY.indexOf(x.it.r);
   const sorts = {
     copies_desc: (a, b) => b.count - a.count || byName(a, b),
     copies_asc: (a, b) => a.count - b.count || byName(a, b),
+    rarity_desc: (a, b) => rIdx(a) - rIdx(b) || byName(a, b),
+    rarity_asc: (a, b) => rIdx(b) - rIdx(a) || byName(a, b),
     az: byName,
     za: (a, b) => byName(b, a),
   };
@@ -189,6 +199,16 @@ function renderPot() {
     ? Object.entries(counts).map(([id, n]) =>
         `${esc(R.catalog[id]?.n || id)}${n > 1 ? ` ×${n}` : ""}`).join(" · ")
     : `<span class="muted2">The pot is empty.</span>`;
+  // a standing reminder while something rare-or-better is sitting in there
+  const risky = [...new Set(R.pot)].map((id) => R.catalog[id])
+    .filter((it) => it && PRECIOUS.has(it.r));
+  const warnEl = $("#potWarn");
+  if (warnEl) {
+    warnEl.className = risky.length ? "potwarn" : "potwarn hidden";
+    warnEl.innerHTML = risky.length
+      ? `⚠️ There's ${risky.map((it) => `${RARITY_DOT[it.r]} <b>${esc(cap(it.r))}</b>`).join(" and ")}
+         in the pot. Cooking it doesn't change your odds.` : "";
+  }
   const btn = $("#cookBtn");
   btn.disabled = R.busy || R.pot.length !== NEED;
   btn.textContent = R.busy ? "🍳 Cooking…"
@@ -197,17 +217,17 @@ function renderPot() {
 
 /* ---------- render: the picker grid ---------- */
 function renderGrid() {
-  const all = commons();
-  const owned = Object.entries(R.inv)
-    .filter(([id]) => R.catalog[id]?.r === "common")
-    .reduce((n, [, c]) => n + c, 0);
-  $("#commonCount").textContent = `${owned} in stock`;
+  renderRarityFilter();
+  renderTypeFilter();
+  const all = pickable();
+  const owned = Object.values(R.inv).reduce((n, c) => n + c, 0);
+  $("#stockCount").textContent = `${owned} in stock`;
   $("#dupWrap").className = "toggle" + (R.dupOnly ? " on" : "");
 
   const grid = $("#grid");
   if (!all.length) {
     grid.innerHTML = `<div class="empty-inv">${
-      owned ? "No commons match those filters." : "No commons to cook right now."}</div>`;
+      owned ? "Nothing matches those filters." : "Nothing to cook with right now."}</div>`;
     $("#pager").innerHTML = "";
     return;
   }
@@ -217,7 +237,7 @@ function renderGrid() {
   grid.innerHTML = slice.map((r) => {
     const inPot = potCount(r.id);
     const free = r.count - inPot;
-    return `<div class="inv-item${free <= 0 ? " maxed" : ""}" data-r="common" data-id="${esc(r.id)}">
+    return `<div class="inv-item${free <= 0 ? " maxed" : ""}" data-r="${esc(r.it.r)}" data-id="${esc(r.id)}">
       <span class="ct${r.count > 1 ? " dup" : ""}">×${r.count}</span>
       ${inPot ? `<span class="inpot">in pot ${inPot}</span>` : ""}
       <img loading="lazy" src="${imgUrl(r.it.img)}" alt="" />
@@ -244,8 +264,41 @@ function addToPot(id) {
   if (R.busy) return;
   if (R.pot.length >= NEED) return toast("The pot's already full — hit Cook!", true);
   if (freeCount(id) <= 0) return toast("You've no more of that one free.", true);
+  const it = R.catalog[id];
+  // rare or better is a straight loss — the roll is the same whatever goes in,
+  // so make it a deliberate choice rather than one stray click
+  if (it && PRECIOUS.has(it.r)) return confirmPrecious(it, () => {
+    R.pot.push(id);
+    renderAll();
+  });
   R.pot.push(id);
   renderAll();
+}
+
+/* ---------- "are you sure?" for a rare/epic/legendary ---------- */
+function confirmPrecious(it, onYes) {
+  const wrap = document.createElement("div");
+  wrap.className = "modal-wrap";
+  wrap.innerHTML = `
+    <div class="modal" role="dialog" aria-modal="true" aria-label="Confirm">
+      <img src="${imgUrl(it.img)}" alt="" />
+      <h3>Cook with a ${esc(cap(it.r))} item?</h3>
+      <p class="who">${RARITY_DOT[it.r]} <b class="r-${esc(it.r)}">${esc(it.n)}</b></p>
+      <p class="why">It <b>doesn't change your odds</b> — what comes out of the pot is the
+        same roll whatever you put in. Cooking this one just loses it.</p>
+      <div class="acts">
+        <button class="btn ghost" id="mNo">Keep it</button>
+        <button class="btn danger" id="mYes">Cook it anyway</button>
+      </div>
+    </div>`;
+  const close = () => { wrap.remove(); document.removeEventListener("keydown", onKey); };
+  const onKey = (e) => { if (e.key === "Escape") close(); };
+  wrap.onclick = (e) => { if (e.target === wrap) close(); };
+  document.body.appendChild(wrap);
+  document.addEventListener("keydown", onKey);
+  wrap.querySelector("#mNo").onclick = close;
+  wrap.querySelector("#mYes").onclick = () => { close(); onYes(); };
+  wrap.querySelector("#mYes").focus();
 }
 
 /* ---------- cooking ---------- */
@@ -303,6 +356,7 @@ async function cook() {
 function restorePot() {
   $("#potBody").innerHTML = `<div class="pot" id="potSlots"></div>
     <p class="potnames" id="potNames"></p>
+    <p id="potWarn" class="potwarn hidden"></p>
     <button class="btn gold cookbtn" id="cookBtn">🍳 Cook!</button>`;
   $("#cookBtn").onclick = cook;
   renderAll();
@@ -355,17 +409,29 @@ async function loadRecent() {
   }).join("");
 }
 
-/* ---------- type filter ---------- */
+/* ---------- filters ---------- */
+function renderRarityFilter() {
+  const have = new Set(Object.keys(R.inv).map((id) => R.catalog[id]?.r).filter(Boolean));
+  const opts = ["all", ...RARITY.filter((r) => have.has(r))];
+  const box = $("#rarityFilter");
+  box.innerHTML = opts.map((r) =>
+    `<button data-r="${r}" class="${r === R.rar ? "on" : ""}">${
+      r === "all" ? "All rarities" : cap(r)}</button>`).join("");
+  box.querySelectorAll("button").forEach((b) => (b.onclick = () => {
+    R.rar = b.dataset.r; R.page = 0; renderGrid();
+  }));
+}
+
 function renderTypeFilter() {
   const cats = [...new Set(Object.keys(R.inv)
-    .map((id) => R.catalog[id]).filter((it) => it && it.r === "common")
+    .map((id) => R.catalog[id]).filter(Boolean)
     .map((it) => it.c).filter(Boolean))].sort();
   const label = { pin: "Pins", clothing: "Clothing" };
   $("#typeFilter").innerHTML = ["all", ...cats].map((c) =>
     `<button data-c="${c}" class="${c === R.cat ? "on" : ""}">${
       c === "all" ? "All types" : (label[c] || cap(c))}</button>`).join("");
   $("#typeFilter").querySelectorAll("button").forEach((b) => (b.onclick = () => {
-    R.cat = b.dataset.c; R.page = 0; renderTypeFilter(); renderGrid();
+    R.cat = b.dataset.c; R.page = 0; renderGrid();
   }));
 }
 
@@ -380,8 +446,7 @@ async function render(session) {
   }
   $("#gate").classList.add("hidden"); $("#panel").classList.remove("hidden");
   $("#needN").textContent = String(NEED);
-  await loadInv();
-  renderTypeFilter();
+  await loadInv();   // → renderAll() → renderGrid(), which draws both filters
   loadRecent();
 }
 

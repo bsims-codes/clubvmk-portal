@@ -44,6 +44,24 @@
   .cookbtn{width:100%;justify-content:center;display:flex;font-size:15px;padding:13px}
   .cookbtn:disabled{opacity:.45;cursor:default;transform:none}
 
+  /* standing reminder while something rare-or-better sits in the pot */
+  .potwarn{background:rgba(224,106,106,.09);border:1px solid rgba(224,106,106,.38);
+    border-radius:11px;padding:9px 12px;font-size:12.5px;color:#f0b9bc;margin:0 0 12px;line-height:1.5}
+
+  /* "are you sure?" when a rare/epic/legendary is dropped in */
+  .modal-wrap{position:fixed;inset:0;z-index:70;display:grid;place-items:center;padding:20px;
+    background:rgba(6,8,20,.72);backdrop-filter:blur(3px);animation:fade .16s ease-out}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  .modal{max-width:380px;width:100%;text-align:center;background:var(--panel);
+    border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px}
+  .modal img{width:96px;height:96px;object-fit:contain}
+  .modal h3{font-family:var(--font-d);font-size:19px;margin:8px 0 4px}
+  .modal .who{font-size:14px;margin:0 0 10px}
+  .modal .why{font-size:13px;color:var(--muted);margin:0 0 18px;line-height:1.55}
+  .modal .acts{display:flex;gap:10px;justify-content:center}
+  .modal .acts .btn{flex:1}
+  .btn.danger{background:linear-gradient(180deg,#e88a8a,#d05555);color:#2a0a0a;border:none}
+
   /* result */
   .result{text-align:center;padding:6px 0 2px}
   .result img{width:132px;height:132px;object-fit:contain}
@@ -114,8 +132,9 @@
 
   <div id="panel" class="hidden">
     <h1>🐀 Remy's Kitchen</h1>
-    <p class="lede">Toss <b id="needN">3</b> spare commons in the pot and Remy cooks them into
-      one new item — usually an uncommon, but the pot can turn out something far better.
+    <p class="lede">Toss any <b id="needN">3</b> items in the pot and Remy cooks them into
+      one new one — usually an uncommon, but the pot can turn out something far better.
+      What you put in never changes the roll, so spare commons are the sensible feed.
       The cook happens on the bot, and the result is announced in Discord.</p>
 
     <div id="setupNote" class="setup hidden"></div>
@@ -125,23 +144,27 @@
     <div class="kitchen">
       <section class="card potcard">
         <h2>🍲 The pot</h2>
-        <p class="hint" id="potHint">Pick 3 commons from your collection.</p>
+        <p class="hint" id="potHint">Any 3 items from your collection — what you put in
+          doesn't change what comes out.</p>
         <div id="potBody">
           <div class="pot" id="potSlots"></div>
           <p class="potnames" id="potNames"></p>
+          <p id="potWarn" class="potwarn hidden"></p>
           <button class="btn gold cookbtn" id="cookBtn" disabled>🍳 Cook!</button>
         </div>
       </section>
 
       <section class="card">
-        <h2>Your commons <span class="pill" id="commonCount"></span></h2>
+        <h2>Your collection <span class="pill" id="stockCount"></span></h2>
         <p class="hint">Click an item to drop it in the pot — click it again for a second copy,
-          up to the number you own.</p>
+          up to the number you own. Spare commons are the cheap choice, but anything's allowed.</p>
         <div class="ctrls">
-          <input id="q" class="search" type="text" placeholder="Search your commons…" autocomplete="off" />
+          <input id="q" class="search" type="text" placeholder="Search your items…" autocomplete="off" />
           <select id="sort" title="Sort">
             <option value="copies_desc">Copies: most first</option>
             <option value="copies_asc">Copies: fewest first</option>
+            <option value="rarity_asc">Rarity: low → high</option>
+            <option value="rarity_desc">Rarity: high → low</option>
             <option value="az">Name: A → Z</option>
             <option value="za">Name: Z → A</option>
           </select>
@@ -150,6 +173,7 @@
           </label>
         </div>
         <div class="ctrls">
+          <div id="rarityFilter" class="rarity-filter"></div>
           <div id="typeFilter" class="rarity-filter"></div>
         </div>
         <div id="grid" class="inv-grid"></div>
