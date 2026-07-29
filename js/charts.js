@@ -176,14 +176,26 @@ function barsH(host, { rows, color, unit = "", max }) {
 }
 
 /* ---------- heatmap: magnitude across weekday × hour ---------- */
-/* Sequential single hue, light→dark, monotonic in lightness (checked). */
-const HEAT_RAMP = ["#1b2038", "#3d3320", "#5f4a1c", "#87661a", "#b08420", "#d8a63a", "#f7c96a"];
+/* Sequential single hue, monotonic in lightness, anchored at the dark surface
+   so "busier" reads as "brighter".
+
+   This was a gold ramp to match the rest of the page, and it was mud: yellow
+   sheds chroma as it darkens, so the bottom half turned into near-grey browns
+   (C 0.03–0.07) that nobody could tell apart on a navy panel. Blue holds its
+   chroma down low (C 0.13–0.16 at the same lightness), which is the whole
+   reason the reference sequential hue is blue. Steps are ~0.09 apart in OKLCH
+   L, all the way up. */
+const HEAT_RAMP = ["#1b2038", "#184f95", "#256abf", "#3987e5", "#6da7ec", "#9ec5f4", "#cde2fb"];
 function heatmap(host, { cells, rowLabels, colLabels, max, unit = "", describe }) {
   host.innerHTML = "";
   const top = Math.max(1, max ?? Math.max(0, ...cells.map((c) => c.v)));
   const grid = document.createElement("div");
   grid.className = "ch-heat";
-  grid.style.gridTemplateColumns = `auto repeat(${colLabels.length}, 1fr)`;
+  // minmax(0,1fr), not 1fr: a plain 1fr is minmax(AUTO,1fr), so the hour labels
+  // in the header row widened their own columns and squeezed the unlabelled
+  // ones. Zero the floor and every cell is the same width; the labels overflow
+  // into the blank columns either side of them, which is what we want.
+  grid.style.gridTemplateColumns = `auto repeat(${colLabels.length}, minmax(0, 1fr))`;
   const at = {};
   for (const c of cells) at[c.y + ":" + c.x] = c.v;
 

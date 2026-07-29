@@ -389,7 +389,9 @@ body.dragging-item .featured-row .fslot:not(.filled){border-color:var(--gold-sof
 .ch-heat-cell.zero{background:rgba(150,165,230,.05)}
 .ch-heat-cell:hover{outline:2px solid var(--gold);outline-offset:-1px}
 .ch-heat-row{font-size:11px;color:var(--faint);padding-right:8px;text-align:right}
-.ch-heat-col{font-size:10px;color:var(--faint);text-align:center}
+/* labels are allowed to spill into the unlabelled columns either side, so they
+   never dictate column width (see gridTemplateColumns in charts.js) */
+.ch-heat-col{font-size:10px;color:var(--faint);text-align:center;white-space:nowrap;overflow:visible}
 .ch-key{display:flex;align-items:center;gap:5px;margin-top:10px;font-size:11px;color:var(--faint)}
 .ch-key i{width:16px;height:9px;border-radius:2px;display:block}
 .ch-key-max{margin-left:auto}
