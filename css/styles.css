@@ -344,6 +344,9 @@ body.dragging-item .featured-row .fslot:not(.filled){border-color:var(--gold-sof
 .combine-row img{width:46px;height:46px;object-fit:contain;flex:none}
 .combine-row .who{display:block;font-weight:600;font-size:14px}
 .combine-row .have{display:block;color:var(--faint);font-size:12px;margin-top:2px}
+/* it lives in the narrow settings column, so the name block gets to wrap and
+   the controls drop to their own line rather than squeezing */
+.combine-row>span:not(.acts){flex:1 1 120px;min-width:0}
 .combine-row .acts{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .combine-row select{background:var(--bg2);border:1px solid var(--line);border-radius:9px;
   color:var(--ink);font-family:inherit;font-size:13px;padding:8px 10px}

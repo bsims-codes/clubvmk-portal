@@ -16,9 +16,18 @@ const baseItemId = (id) => (id.includes("*") ? id.slice(0, id.lastIndexOf("*")) 
 // Falls back to the base pin's art where it can, so combined Magics still look right.
 function unknownItem(id) {
   const base = S.catalog[baseItemId(id)];
-  return { n: base ? base.n : id, r: base ? base.r : "common",
+  const stars = itemStars(id);
+  return { n: (stars > 1 ? `${stars}★ ` : "") + (base ? base.n : id),
+           r: base ? base.r : "common",
            c: base ? base.c : "pin", img: base ? base.img : "" };
 }
+
+// Anything the player can actually show off. The bot's CATALOG contains the
+// starred Magic variants (it generates them at runtime); catalog.min.json does
+// NOT, so gating the showcase on the catalogue alone silently refused every
+// combined Magic. Ownership is the real test — art and name fall back to the
+// base pin.
+const showableItem = (id) => S.catalog[id] || (ownedCount(id) > 0 ? unknownItem(id) : null);
 const itemStars = (id) => (id.includes("*") ? Number(id.slice(id.lastIndexOf("*") + 1)) || 1 : 1);
 
 // How many copies of an item the player holds. An item may take more than one
@@ -32,7 +41,7 @@ function clampFeatured(feat) {
   const out = [], used = {};
   for (const id of Array.isArray(feat) ? feat : []) {
     const n = used[id] || 0;
-    if (!S.catalog[id] || n >= ownedCount(id)) continue;
+    if (!showableItem(id) || n >= ownedCount(id)) continue;
     out.push(id); used[id] = n + 1;
     if (out.length >= FEATURED_MAX) break;
   }
@@ -220,7 +229,7 @@ async function loadData() {
   S.themesOwned = Array.isArray(prof?.themes_owned) ? prof.themes_owned : [];
   S.totalItems = S.inv.reduce((n, r) => n + r.count, 0);
   S.byTier = {};
-  for (const r of S.inv) { const it = S.catalog[r.item_id]; if (it) S.byTier[it.r] = (S.byTier[it.r] || 0) + r.count; }
+  for (const r of S.inv) { const it = S.catalog[baseItemId(r.item_id)]; if (it) S.byTier[it.r] = (S.byTier[it.r] || 0) + r.count; }
   wireEditor();
   renderAll();
   doRender(true);   // show the real, true-size card straight away
@@ -521,7 +530,7 @@ function renderFeatured() {
   row.style.setProperty("--feat-cols", FEATURED_PER_ROW);   // wrap like the rendered card
   for (let i = 0; i < FEATURED_MAX; i++) {
     const id = S.draft.featured[i];
-    const it = id && S.catalog[id];
+    const it = id && showableItem(id);
     const slot = document.createElement("div");
     slot.className = "fslot" + (it ? " filled" : "");
     slot.dataset.slot = i;
@@ -561,7 +570,7 @@ function renderFeatured() {
 }
 
 function dropInvOnSlot(i, itemId) {
-  if (!S.catalog[itemId]) return;
+  if (!showableItem(itemId)) return;
   const f = S.draft.featured.slice();
   if (i < f.length) f[i] = itemId; else f.push(itemId);   // replace that slot, or fill next
   const owned = ownedCount(itemId);                       // dupes are fine — spare copies aren't
@@ -612,7 +621,7 @@ function filteredInv() {
 
 function renderTypeFilter() {
   const f = $("#typeFilter");
-  const cats = [...new Set(S.inv.map((r) => S.catalog[r.item_id]?.c).filter(Boolean))].sort();
+  const cats = [...new Set(S.inv.map((r) => (S.catalog[r.item_id] || unknownItem(r.item_id)).c).filter(Boolean))].sort();
   const label = { pin: "Pins", clothing: "Clothing" };
   f.innerHTML = ["all", ...cats].map((c) =>
     `<button data-c="${c}" class="${c === S.invCat ? "on" : ""}">${c === "all" ? "All types" : (label[c] || cap(c))}</button>`).join("");
@@ -666,13 +675,13 @@ function renderInv() {
 
 /* ---------- inventory right-click menu ---------- */
 function showItemMenu(x, y, id) {
-  const it = S.catalog[id]; if (!it) return;
+  const it = showableItem(id); if (!it) return;
   const m = $("#ctxMenu");
   const rows = [`<div class="ctx-head">Feature: ${esc(it.n)}</div>`];
   const acts = [];
   for (let i = 0; i < FEATURED_MAX; i++) {
     const occId = S.draft.featured[i];
-    const occ = occId ? (occId === id ? "★ this item" : (S.catalog[occId]?.n || "item")) : "empty";
+    const occ = occId ? (occId === id ? "★ this item" : (showableItem(occId)?.n || "item")) : "empty";
     rows.push(`<button class="ctx-item" data-i="${acts.length}">Slot ${i + 1} <span class="ctx-sub">${esc(occ)}</span></button>`);
     acts.push(() => dropInvOnSlot(i, id));
   }
