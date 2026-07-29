@@ -32,6 +32,9 @@
   tbody tr:hover { background: rgba(150,165,230,.05); }
   .tablewrap { max-height: 440px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; }
   .muted2 { color: var(--faint); }
+  td.res { max-width: 420px; font-size: 13px; }
+  .res-win { color: #8fe0bd; }
+  .res-lose { color: #e8888f; }
   .warn:empty { display: none; }
   .warn { color: #ffd27a; margin-bottom: 12px; }
   .warn code { background: #1a1f38; padding: 1px 6px; border-radius: 5px; font-size: 12px; }
@@ -151,8 +154,11 @@
 
     <section class="blk">
       <h2 class="sec">🕘 Recent commands</h2>
+      <p class="subtle">What each one actually did — what went into Remy's pot and what came
+        out, what Wall-E dug up, whether a Hades deal or a dragon fight was won or lost.</p>
+      <p class="warn" id="recentNote"></p>
       <div class="tablewrap"><table id="recentTbl"><thead><tr>
-        <th>When</th><th>Player</th><th>Command</th><th>Target</th>
+        <th>When</th><th>Player</th><th>Command</th><th>Target</th><th>Result</th>
       </tr></thead><tbody></tbody></table></div>
     </section>
   </div>

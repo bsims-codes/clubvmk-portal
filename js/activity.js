@@ -81,8 +81,8 @@ async function loadAll() {
     rpcAll("activity_commands", args, ["command"]),
     rpcAll("activity_players", args, ["discord_id"]),
     rpcAll("activity_targets", args, ["command", "actor", "target"]),
-    sb.from("command_log").select("ts,discord_id,command,target_id")
-      .order("ts", { ascending: false }).limit(50),
+    sb.from("command_log").select("ts,discord_id,command,target_id,result")
+      .order("ts", { ascending: false }).limit(80),
   ]);
   if (c.error || p.error || t.error) {
     $("#note").innerHTML = `⚠️ Activity data unavailable — run
@@ -94,6 +94,14 @@ async function loadAll() {
   D.players = p.data || [];
   D.targets = t.data || [];
   D.recent = r.data || [];
+  if (r.error) {
+    // the `result` column may not exist yet — fall back to the old shape so the
+    // table still lists commands instead of going blank
+    const { data } = await sb.from("command_log").select("ts,discord_id,command,target_id")
+      .order("ts", { ascending: false }).limit(80);
+    D.recent = data || [];
+    D.noResultCol = true;
+  }
   D.names = {};
   for (const x of D.players) if (x.display_name) D.names[x.discord_id] = x.display_name;
   for (const x of D.targets) {
@@ -238,12 +246,33 @@ function renderTargets() {
     || `<tr><td colspan="4" class="muted2">No targeted commands in this window.</td></tr>`;
 }
 
+/* Outcomes are plain strings from the bot; a couple of shapes get a colour so
+   wins/losses are scannable without reading every row. */
+function resultCell(r) {
+  const v = (r.result || "").trim();
+  if (!v) {
+    return D.noResultCol
+      ? `<span class="muted2">—</span>`
+      : `<span class="muted2">—</span>`;
+  }
+  const cls = /^WON|^healed|^\+/.test(v) ? "res-win"
+            : /^LOST|^froze/.test(v) ? "res-lose" : "";
+  return `<span class="${cls}">${esc(v)}</span>`;
+}
+
 function renderRecent() {
   $("#recentTbl").querySelector("tbody").innerHTML = D.recent.map((r) =>
     `<tr><td class="muted2">${esc(when(r.ts))}</td><td>${esc(nameOf(r.discord_id))}</td>
      <td>/${esc(r.command)}</td>
-     <td class="muted2">${r.target_id ? esc(nameOf(r.target_id)) : "—"}</td></tr>`).join("")
-    || `<tr><td colspan="4" class="muted2">Nothing yet.</td></tr>`;
+     <td class="muted2">${r.target_id ? esc(nameOf(r.target_id)) : "—"}</td>
+     <td class="res">${resultCell(r)}</td></tr>`).join("")
+    || `<tr><td colspan="5" class="muted2">Nothing yet.</td></tr>`;
+  const note = $("#recentNote");
+  if (note) {
+    note.innerHTML = D.noResultCol
+      ? `Outcomes need <code>webportal/schema_command_result.sql</code> run in Supabase.`
+      : "";
+  }
 }
 
 function wireSort(tblId, sortObj, rerender, nameKey) {
