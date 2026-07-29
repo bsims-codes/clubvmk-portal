@@ -48,19 +48,8 @@
   .potwarn{background:rgba(224,106,106,.09);border:1px solid rgba(224,106,106,.38);
     border-radius:11px;padding:9px 12px;font-size:12.5px;color:#f0b9bc;margin:0 0 12px;line-height:1.5}
 
-  /* "are you sure?" when a rare/epic/legendary is dropped in */
-  .modal-wrap{position:fixed;inset:0;z-index:70;display:grid;place-items:center;padding:20px;
-    background:rgba(6,8,20,.72);backdrop-filter:blur(3px);animation:fade .16s ease-out}
-  @keyframes fade{from{opacity:0}to{opacity:1}}
-  .modal{max-width:380px;width:100%;text-align:center;background:var(--panel);
-    border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px}
-  .modal img{width:96px;height:96px;object-fit:contain}
-  .modal h3{font-family:var(--font-d);font-size:19px;margin:8px 0 4px}
-  .modal .who{font-size:14px;margin:0 0 10px}
-  .modal .why{font-size:13px;color:var(--muted);margin:0 0 18px;line-height:1.55}
-  .modal .acts{display:flex;gap:10px;justify-content:center}
-  .modal .acts .btn{flex:1}
-  .btn.danger{background:linear-gradient(180deg,#e88a8a,#d05555);color:#2a0a0a;border:none}
+  /* the "are you sure?" dialog itself now lives in css/styles.css, shared with
+     the vault's Magic combining */
 
   /* result */
   .result{text-align:center;padding:6px 0 2px}

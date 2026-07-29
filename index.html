@@ -143,6 +143,18 @@
       </div>
     </details>
   </div>
+
+  <!-- Magic combining. Lives with the inventory because that's where you notice
+       the duplicates; the bot does the actual fusing. -->
+  <details class="panel combine-panel" id="combinePanel" open>
+    <summary class="panel-head"><h2>✨ Combine Magic</h2><span id="combineCount" class="muted"></span></summary>
+    <div class="panel-body">
+      <p class="hint">Fuse duplicate <b>Magic</b> pins into a starred one — two plain copies make
+        a 2★, a 2★ plus a plain makes a 3★, and so on up to 5★. The pieces are consumed, and
+        the result is posted in Discord.</p>
+      <div id="combineList" class="combine-list"></div>
+    </div>
+  </details>
 </main>
 
 <div id="ctxMenu" class="ctx-menu hidden"></div>

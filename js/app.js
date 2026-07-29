@@ -277,7 +277,175 @@ function wireEditor() {
 }
 
 /* ---------- render everything ---------- */
-function renderAll() { renderThemes(); renderTitles(); renderFeatured(); renderRarityFilter(); renderInv(); renderPreview(); syncSaveState(); }
+function renderAll() { renderThemes(); renderTitles(); renderFeatured(); renderRarityFilter(); renderInv(); renderCombine(); renderPreview(); syncSaveState(); }
+
+/* ============================================================
+   Magic combining — a straight port of the bot's plan_combine().
+
+   A Magic is a PIN whose name starts with "Magic - " (the clothing "Magic - …"
+   items aren't combinable, exactly as is_magic() has it). Fusing spends the
+   pieces, so the plan prefers spending the LOWEST-starred copies and already-
+   combined items survive where they can. The portal only ever queues the
+   request — combine_requests, drained by the bot, which re-checks everything.
+   ============================================================ */
+const STAR_MAX = 5;
+const isMagic = (it) => it && it.c === "pin" && (it.n || "").startsWith("Magic - ");
+const starLabel = (n) => (n <= 1 ? "plain" : `${n}★`);
+
+// Python compares tuples element-by-element; JS `<` on arrays compares them as
+// STRINGS, which picks a different plan. Compare numerically, explicitly.
+function cmpKey(a, b) {
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return a[i] < b[i] ? -1 : 1;
+  return 0;
+}
+
+// counts: {stars: available} -> {stars: used} landing exactly on `target`, or
+// null. Same lexicographic preference as the bot: maximise plain copies spent.
+function planCombine(counts, target) {
+  let best = null;
+  const used = {};
+  (function rec(star, left) {
+    if (left === 0) {
+      if (Object.values(used).reduce((a, b) => a + b, 0) < 2) return;  // no self-fusing
+      const key = [];
+      for (let s = 1; s <= STAR_MAX; s++) key.push(-(used[s] || 0));
+      if (!best || cmpKey(key, best.key) < 0) best = { key, plan: { ...used } };
+      return;
+    }
+    if (star > STAR_MAX || left < 0) return;
+    const most = Math.min(counts[star] || 0, Math.floor(left / star));
+    for (let n = most; n >= 0; n--) {
+      if (n) used[star] = n;
+      rec(star + 1, left - star * n);
+      delete used[star];
+    }
+  })(1, target);
+  return best ? best.plan : null;
+}
+
+const combinableTargets = (counts) => {
+  const out = [];
+  for (let t = 2; t <= STAR_MAX; t++) if (planCombine(counts, t)) out.push(t);
+  return out;
+};
+
+/* {base_id: {stars: count}} for every Magic pin the player holds. */
+function magicHoldings() {
+  const out = {};
+  for (const r of S.inv) {
+    const base = S.catalog[baseItemId(r.item_id)];
+    if (!isMagic(base)) continue;
+    const n = itemStars(r.item_id);
+    (out[baseItemId(r.item_id)] ||= {})[n] = (out[baseItemId(r.item_id)][n] || 0) + r.count;
+  }
+  return out;
+}
+
+const describePlan = (plan) => Object.keys(plan).map(Number).sort((a, b) => a - b)
+  .map((s) => `${plan[s]}× ${starLabel(s)}`).join(" + ");
+
+function renderCombine() {
+  const box = $("#combineList");
+  if (!box) return;
+  const holdings = magicHoldings();
+  const rows = Object.entries(holdings)
+    .map(([baseId, counts]) => ({ baseId, counts, targets: combinableTargets(counts) }))
+    .filter((r) => r.targets.length)
+    .sort((a, b) => (S.catalog[a.baseId]?.n || "").localeCompare(S.catalog[b.baseId]?.n || ""));
+
+  const owned = Object.keys(holdings).length;
+  $("#combineCount").textContent = rows.length
+    ? `${rows.length} ready` : owned ? `${owned} Magic${owned === 1 ? "" : "s"} held` : "";
+  if (!rows.length) {
+    box.innerHTML = `<p class="combine-empty">${owned
+      ? "None of your Magics can be fused yet — you need at least two pieces of the same one that add up to 5★ or less."
+      : "You have no Magic pins yet. They're pins named <b>Magic - …</b> — collect duplicates of one, then fuse them here."}</p>`;
+    return;
+  }
+  box.innerHTML = "";
+  for (const r of rows) {
+    const base = S.catalog[r.baseId] || unknownItem(r.baseId);
+    const have = Object.keys(r.counts).map(Number).sort((a, b) => a - b)
+      .map((s) => `${r.counts[s]}× ${starLabel(s)}`).join(", ");
+    const el = document.createElement("div");
+    el.className = "combine-row";
+    el.innerHTML = `<img src="${imgUrl(base.img)}" alt="" loading="lazy" />
+      <span><span class="who">${esc(base.n)}</span>
+        <span class="have">You hold ${esc(have)}</span></span>
+      <span class="acts">
+        <select>${r.targets.map((t) =>
+          `<option value="${t}"${t === r.targets[r.targets.length - 1] ? " selected" : ""}
+            >Make ${t}★</option>`).join("")}</select>
+        <button class="btn tiny gold">✨ Combine</button>
+      </span>`;
+    const sel = el.querySelector("select"), btn = el.querySelector("button");
+    btn.onclick = () => confirmCombine(r.baseId, Number(sel.value), r.counts);
+    box.appendChild(el);
+  }
+}
+
+/* Fusing is destructive and irreversible, so it always asks — showing exactly
+   which pieces get spent, the same line the bot's confirm shows. */
+function confirmCombine(baseId, target, counts) {
+  const base = S.catalog[baseId] || unknownItem(baseId);
+  const plan = planCombine(counts, target);
+  if (!plan) return toast("Those pieces don't add up any more — reload.", true);
+  const wrap = document.createElement("div");
+  wrap.className = "modal-wrap";
+  wrap.innerHTML = `
+    <div class="modal" role="dialog" aria-modal="true" aria-label="Confirm combine">
+      <img src="${imgUrl(base.img)}" alt="" />
+      <h3>Combine into <span class="stars">${"⭐".repeat(target)}</span> ${esc(base.n)}?</h3>
+      <p class="why">This spends <b>${esc(describePlan(plan))}</b> and gives you
+        <b>one ${starLabel(target)}</b> Magic.<br><b>It can't be undone.</b></p>
+      <div class="acts">
+        <button class="btn ghost" id="cNo">Cancel</button>
+        <button class="btn gold" id="cYes">✨ Combine</button>
+      </div>
+    </div>`;
+  const close = () => { wrap.remove(); document.removeEventListener("keydown", onKey); };
+  const onKey = (e) => { if (e.key === "Escape") close(); };
+  wrap.onclick = (e) => { if (e.target === wrap) close(); };
+  document.body.appendChild(wrap);
+  document.addEventListener("keydown", onKey);
+  wrap.querySelector("#cNo").onclick = close;
+  wrap.querySelector("#cYes").onclick = () => { close(); doCombine(baseId, target, plan); };
+}
+
+async function doCombine(baseId, target, plan) {
+  toast("✨ Sending it to the bot…");
+  const { data, error } = await sb.from("combine_requests")
+    .insert({ discord_id: String(S.discordId), guild_id: String(S.guild),
+              base_id: baseId, target })
+    .select("id").single();
+  if (error) {
+    return toast(/does not exist|schema cache/i.test(error.message)
+      ? "Combining isn't set up in Supabase yet — run webportal/schema_combine.sql."
+      : "Couldn't queue that: " + error.message, true);
+  }
+  for (let i = 0; i < 20; i++) {
+    await new Promise((r) => setTimeout(r, 1500));
+    const { data: row } = await sb.from("combine_requests")
+      .select("status,result,gained_item").eq("id", data.id).single();
+    if (!row || row.status === "pending") continue;
+    if (row.status === "error") return toast(row.result || "The combine failed.", true);
+    // the bot has already moved the items; keep our copy in step rather than
+    // waiting up to 45s for the next mirror sync
+    for (const s of Object.keys(plan)) {
+      const id = Number(s) <= 1 ? baseId : `${baseId}*${s}`;
+      const row_ = S.inv.find((x) => x.item_id === id);
+      if (row_) row_.count -= plan[s];
+    }
+    S.inv = S.inv.filter((x) => x.count > 0);
+    const gained = row.gained_item || `${baseId}*${target}`;
+    const have = S.inv.find((x) => x.item_id === gained);
+    if (have) have.count++; else S.inv.push({ item_id: gained, count: 1 });
+    S.draft.featured = clampFeatured(S.draft.featured);   // a spent piece can't stay featured
+    renderAll();
+    return toast(`✨ Combined into a ${target}★ — posted in Discord!`);
+  }
+  toast("The bot hasn't answered yet — check back in a moment.", true);
+}
 
 /* ---------- level titles: pick which earned ones show on the card ---------- */
 function earnedTitles() {
@@ -462,10 +630,17 @@ function renderInv() {
   const pages = Math.ceil(all.length / PER);
   S.invPage = Math.min(S.invPage, pages - 1);
   const slice = all.slice(S.invPage * PER, S.invPage * PER + PER);
+  // Magic piles that could be fused right now get a badge, so the combine panel
+  // below isn't the only way to notice
+  const fusable = new Set(Object.entries(magicHoldings())
+    .filter(([, counts]) => combinableTargets(counts).length).map(([id]) => id));
   grid.innerHTML = slice.map((r) => {
     const nfeat = featCount(r.item_id);
+    const stars = itemStars(r.item_id);
     return `<div class="inv-item${nfeat ? " featured" : ""}" data-r="${r.it.r}" data-id="${r.item_id}">
       <span class="ct${r.count > 1 ? " dup" : ""}">${nfeat > 1 ? `★${nfeat} · ` : ""}×${r.count}</span>
+      ${fusable.has(baseItemId(r.item_id)) ? `<span class="mg" title="Can be combined — see Combine Magic below">✨${
+        stars > 1 ? ` ${stars}★` : ""}</span>` : stars > 1 ? `<span class="mg">${stars}★</span>` : ""}
       <img loading="lazy" src="${imgUrl(r.it.img)}" alt=""><div class="nm">${esc(r.it.n)}</div></div>`;
   }).join("");
   grid.querySelectorAll(".inv-item").forEach((el) => {
