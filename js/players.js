@@ -12,7 +12,27 @@ const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) =>
 const num = (n) => Number(n || 0).toLocaleString();
 const baseItemId = (id) => (id.includes("*") ? id.slice(0, id.lastIndexOf("*")) : id);
 
-const P = { me: null, players: [], sel: null, catalog: {}, themes: {}, inv: [], q: "" };
+const P = { me: null, players: [], sel: null, catalog: {}, themes: {}, inv: [], q: "",
+            invQ: "", invSort: { k: "last_at", dir: -1 }, invTier: "all" };
+
+/* Timestamps arrive as ISO from Postgres. Show them in the admin's own zone —
+   the whole point is lining an item up against a Discord message. */
+const dtFull = new Intl.DateTimeFormat(undefined, {
+  year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
+});
+function when(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return isNaN(d) ? "—" : dtFull.format(d);
+}
+function ago(iso) {
+  if (!iso) return "";
+  const s = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (!isFinite(s)) return "";
+  const units = [[86400 * 365, "y"], [86400 * 30, "mo"], [86400, "d"], [3600, "h"], [60, "m"]];
+  for (const [secs, label] of units) if (s >= secs) return `${Math.floor(s / secs)}${label} ago`;
+  return "just now";
+}
 
 let toastT;
 function toast(msg, err) {
@@ -157,6 +177,74 @@ function wireItemPicker(inputId, listId, poolFn, counts) {
 const ownedPool = () => P.inv.map((r) => P.catalog[r.item_id] || { id: r.item_id, n: r.item_id })
                              .filter(Boolean);
 const allPool = () => Object.values(P.catalog);
+const imgUrl = (f) => CFG.ITEM_IMG_BASE + f;
+
+/* ---------- full inventory, with when each item was picked up ---------- */
+function invRows() {
+  const q = P.invQ.toLowerCase();
+  let rows = P.inv.map((r) => {
+    const it = P.catalog[r.item_id] || {};
+    return {
+      id: r.item_id,
+      name: (it.n || "").trim() || r.item_id,
+      tier: it.r || "common",
+      img: it.img || "",
+      count: Number(r.count || 0),
+      first_at: r.first_at || null,
+      last_at: r.last_at || null,
+    };
+  });
+  if (P.invTier !== "all") rows = rows.filter((r) => r.tier === P.invTier);
+  if (q) rows = rows.filter((r) => r.name.toLowerCase().includes(q) ||
+                                   r.id.toLowerCase().includes(q));
+  const { k, dir } = P.invSort;
+  return rows.sort((a, b) => {
+    let x = a[k], y = b[k];
+    if (k === "first_at" || k === "last_at") {
+      // never-recorded timestamps sort to the bottom whichever way the column runs
+      x = x ? Date.parse(x) : -Infinity; y = y ? Date.parse(y) : -Infinity;
+    } else if (k === "tier") {
+      x = RARITY.indexOf(a.tier); y = RARITY.indexOf(b.tier);
+    }
+    if (typeof x === "string") return dir * x.localeCompare(y);
+    return dir * ((x > y) - (x < y));
+  });
+}
+
+function renderInventory() {
+  const rows = invRows();
+  const copies = rows.reduce((n, r) => n + r.count, 0);
+  const missing = rows.some((r) => !r.first_at);
+  $("#invCount").textContent =
+    `${num(rows.length)} unique · ${num(copies)} copies`;
+  $("#invBody").innerHTML = rows.map((r) => `<tr>
+      <td class="ic">${r.img ? `<img loading="lazy" src="${esc(imgUrl(r.img))}" alt="" />` : ""}</td>
+      <td>${esc(r.name)}<br><small class="muted2">${esc(r.id)}</small></td>
+      <td><span class="tier t-${esc(r.tier)}">${esc(r.tier)}</span></td>
+      <td class="num">${r.count > 1 ? `×${num(r.count)}` : "1"}</td>
+      <td>${esc(when(r.first_at))}<br><small class="muted2">${esc(ago(r.first_at))}</small></td>
+      <td>${r.count > 1 || r.last_at ? esc(when(r.last_at)) : "—"}
+        <br><small class="muted2">${esc(r.count > 1 || r.last_at ? ago(r.last_at) : "")}</small></td>
+    </tr>`).join("") ||
+    `<tr><td colspan="6" class="muted2">Nothing matches that filter.</td></tr>`;
+  $("#invNote").innerHTML = missing
+    ? `Some rows have no date yet — run <code>webportal/schema_player_item_times.sql</code>
+       in Supabase, then wait for the next inventory change to sync.`
+    : "";
+}
+
+function wireInventory() {
+  $("#invSearch").oninput = (e) => { P.invQ = e.target.value.trim(); renderInventory(); };
+  $("#invTier").onchange = (e) => { P.invTier = e.target.value; renderInventory(); };
+  $("#invTbl").querySelectorAll("th[data-k]").forEach((th) => {
+    th.onclick = () => {
+      const k = th.dataset.k;
+      // first click on a new column sorts descending — newest / most / rarest first
+      P.invSort = P.invSort.k === k ? { k, dir: -P.invSort.dir } : { k, dir: -1 };
+      renderInventory();
+    };
+  });
+}
 
 /* ---------- detail + tools ---------- */
 function renderDetail() {
@@ -182,6 +270,26 @@ function renderDetail() {
       ${RARITY.map((r) => `<div class="stat"><div class="v">${num(byTier[r] || 0)}</div>
         <div class="k">${r}</div></div>`).join("")}
     </div>
+
+    <details class="invbox" id="invBox">
+      <summary>🎒 Inventory <span class="muted2" id="invCount"></span></summary>
+      <div class="row" style="margin:10px 0 8px">
+        <label class="fld grow"><span>Find an item</span>
+          <input id="invSearch" type="text" placeholder="Name or id…" /></label>
+        <label class="fld"><span>Rarity</span>
+          <select id="invTier"><option value="all">All</option>
+            ${RARITY.map((r) => `<option value="${r}">${r}</option>`).join("")}</select></label>
+      </div>
+      <p class="hintline" id="invNote"></p>
+      <div class="invwrap"><table id="invTbl"><thead><tr>
+        <th></th>
+        <th data-k="name">Item</th>
+        <th data-k="tier">Rarity</th>
+        <th data-k="count" class="num">Copies</th>
+        <th data-k="first_at">First acquired</th>
+        <th data-k="last_at">Latest copy</th>
+      </tr></thead><tbody id="invBody"></tbody></table></div>
+    </details>
 
     <div class="tools">
       <div class="tool">
@@ -266,6 +374,11 @@ function renderDetail() {
   for (const r of P.inv) counts[r.item_id] = r.count;
   wireItemPicker("rfItem", "ownedList", ownedPool, counts);
   wireItemPicker("giItem", "allList", allPool, null);
+  wireInventory();
+  renderInventory();
+  // an open inventory stays open across the refresh that follows a give/take
+  if (P.invOpen) $("#invBox").open = true;
+  $("#invBox").addEventListener("toggle", () => { P.invOpen = $("#invBox").open; });
 
   const v = (id) => $("#" + id).value.trim();
   const n = (id) => Number($("#" + id).value || 0);
