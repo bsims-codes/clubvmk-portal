@@ -105,6 +105,9 @@ async function loadCatalog() {
     }
     for (const id in R.catalog) R.catalog[id].r = map[baseItemId(id)] || "common";
   } catch (e) { console.warn("overrides load failed:", e.message); }
+  // after the overrides: custom items aren't in that table, and its
+  // "not listed means common" rule would flatten every one of them
+  await window.mergeCustomItems(sb, R.catalog);
 }
 
 /* ---------- inventory ---------- */

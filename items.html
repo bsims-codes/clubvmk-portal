@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CLUBVMK · Custom Items</title>
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/styles.css" />
+<style>
+  .aw { max-width: 1000px; margin: 0 auto; padding: 24px 18px 90px; position: relative; z-index: 1; }
+  .ahead { display: flex; align-items: center; justify-content: space-between; gap: 14px;
+           margin-bottom: 4px; flex-wrap: wrap; }
+  .ahead h1 { font-family: "Fraunces", serif; font-size: 30px; margin: 0; }
+  .navlinks a { color: var(--muted); text-decoration: none; margin-left: 14px; font-size: 14px; }
+  .navlinks a:hover { color: var(--gold); }
+  .gate { text-align: center; padding: 80px 20px; }
+  .subtle { color: var(--faint); font-size: 13px; margin: 0 0 12px; }
+  .muted2 { color: var(--faint); }
+  .btn { padding: 9px 15px; border-radius: 9px; border: 1px solid var(--line); background: transparent;
+         color: #cdd; font: inherit; font-weight: 600; cursor: pointer; }
+  .btn.gold { background: var(--gold); color: #201800; border: none; }
+  .btn.danger { border-color: #7a2233; color: #ff9aa8; }
+  .btn:disabled { opacity: .5; cursor: default; }
+  input, select { padding: 8px 11px; border-radius: 9px; border: 1px solid var(--line);
+                  background: #0c1020; color: #eef; font: inherit; }
+  .panel { background: #12162a; border: 1px solid var(--line); border-radius: 14px;
+           padding: 18px; margin-bottom: 18px; }
+  .panel h2 { font-family: "Fraunces", serif; font-size: 18px; margin: 0 0 4px; }
+
+  .maker { display: grid; grid-template-columns: 200px 1fr; gap: 20px; align-items: start; }
+  @media (max-width: 720px) { .maker { grid-template-columns: 1fr; } }
+  /* the drop zone doubles as the preview — you see exactly what the bot will use */
+  .drop { border: 2px dashed var(--line); border-radius: 14px; height: 200px; display: grid;
+          place-items: center; text-align: center; cursor: pointer; background: #0c1020;
+          padding: 10px; transition: border-color .15s, background .15s; }
+  .drop:hover, .drop.over { border-color: var(--gold); background: #141833; }
+  .drop img { max-width: 100%; max-height: 178px; object-fit: contain; }
+  .drop p { margin: 0; font-size: 12.5px; color: var(--faint); }
+  .fld { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+  .fld > span { font-size: 11px; color: var(--faint); text-transform: uppercase; letter-spacing: .04em; }
+  .fld input, .fld select { width: 100%; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 560px) { .two { grid-template-columns: 1fr; } }
+  .chk { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted);
+         cursor: pointer; margin-bottom: 12px; }
+  .hintline { font-size: 11.5px; color: var(--faint); margin: 6px 0 0; }
+  .idprev { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11.5px; color: var(--gold); }
+
+  .ilist { display: grid; gap: 10px; }
+  .irow { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: #0e1226;
+          border: 1px solid var(--line); border-radius: 12px; }
+  .irow img { width: 46px; height: 46px; object-fit: contain; }
+  .irow .nm { font-weight: 600; }
+  .irow .meta { flex: 1; min-width: 0; }
+  .irow small { display: block; color: var(--faint); font-size: 11.5px; }
+  .tier { font-size: 11px; padding: 2px 8px; border-radius: 999px; text-transform: capitalize;
+          border: 1px solid currentColor; white-space: nowrap; }
+  .t-legendary { color: #ffab5e; } .t-epic { color: #c98bff; } .t-rare { color: #6fb0ff; }
+  .t-uncommon { color: #6fd28a; }  .t-common { color: #9aa3c0; }
+  .pill { font-size: 10.5px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line);
+          color: var(--faint); white-space: nowrap; }
+  .pill.ok { color: #6fd28a; border-color: #2c5a3c; }
+  .pill.warn { color: #ffcf7a; border-color: #6a5322; }
+  .pill.bad { color: #ff9aa8; border-color: #7a2233; }
+  .warn { color: #ffcf7a; }
+</style>
+</head>
+<body>
+<div class="stars" aria-hidden="true"></div>
+<div class="aurora" aria-hidden="true"></div>
+
+<main class="aw">
+  <div id="gate" class="gate">
+    <h1>✨ Custom Items</h1>
+    <p class="muted" id="gateMsg">Sign in with Discord to continue.</p>
+    <button id="signInBtn" class="btn gold" style="margin-top:14px">Sign in with Discord</button>
+  </div>
+
+  <div id="panel" style="display:none">
+    <div class="ahead">
+      <h1>✨ Custom Items</h1>
+      <div class="navlinks">
+        <a href="admin-home.html">← Admin home</a>
+        <a href="players.html">👥 Players</a>
+        <a id="signOutBtn" href="#">Sign out</a>
+      </div>
+    </div>
+    <p class="subtle">Invent an item that isn't in MyVMK. The bot picks it up within about two
+      minutes, and from then on it behaves like any other item — grantable, tradeable, and it
+      shows on profile cards.</p>
+    <p class="warn" id="note"></p>
+
+    <div class="panel">
+      <h2>Make an item</h2>
+      <p class="subtle">The art is squared off and shrunk to 512px before it's uploaded.</p>
+      <div class="maker">
+        <div>
+          <div class="drop" id="drop">
+            <p id="dropMsg">Click or drop an image here<br><small>PNG, JPG, WebP or GIF</small></p>
+            <img id="preview" alt="" style="display:none" />
+          </div>
+          <p class="hintline" id="imgInfo"></p>
+          <input type="file" id="file" accept="image/*" style="display:none" />
+        </div>
+        <div>
+          <label class="fld"><span>Item name</span>
+            <input id="name" type="text" maxlength="80" placeholder="e.g. Founder's Crown" /></label>
+          <p class="hintline">Item id: <span class="idprev" id="idPrev">—</span></p>
+          <div class="two" style="margin-top:12px">
+            <label class="fld"><span>Rarity</span>
+              <select id="rarity">
+                <option value="legendary">Legendary</option>
+                <option value="epic">Epic</option>
+                <option value="rare">Rare</option>
+                <option value="uncommon">Uncommon</option>
+                <option value="common" selected>Common</option>
+              </select></label>
+            <label class="fld"><span>Category</span>
+              <input id="category" type="text" maxlength="30" value="custom" /></label>
+          </div>
+          <label class="chk"><input type="checkbox" id="spawnable" />
+            Let it drop naturally in the spawn channel
+            <span class="muted2">— off means only you can hand it out</span></label>
+          <button class="btn gold" id="create">Create item</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Existing custom items <span class="muted2" id="count"></span></h2>
+      <p class="subtle">Retiring an item stops it dropping and hides it from the portal —
+        copies players already own are untouched.</p>
+      <div class="ilist" id="list"></div>
+    </div>
+  </div>
+</main>
+
+<div id="toast" class="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/custom-items.js"></script>
+<script src="js/items.js"></script>
+</body>
+</html>

@@ -37,6 +37,9 @@ async function loadCatalog() {
     }
     for (const id in D.catalog) D.catalog[id].r = map[baseItemId(id)] || "common";
   } catch (e) { /* keep the baked rarities */ }
+  // after the overrides: custom items aren't in that table, and its
+  // "not listed means common" rule would flatten every one of them
+  await window.mergeCustomItems(sb, D.catalog);
 }
 
 /* PostgREST caps responses at 1000 rows; page through anything that can exceed it. */

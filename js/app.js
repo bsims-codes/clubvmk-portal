@@ -101,6 +101,9 @@ async function boot() {
   S.themes = thm;
   S.titles = ttl;
   await applyRarityOverrides();
+  // after the overrides: custom items aren't in that table, and its
+  // "not listed means common" rule would flatten every one of them
+  await window.mergeCustomItems(sb, S.catalog);
 
   $("#signInBtn").onclick = signIn;
   document.addEventListener("click", (e) => { if (!e.target.closest("#ctxMenu")) hideCtxMenu(); });
@@ -794,7 +797,8 @@ function finishRender() {
 }
 
 /* ---------- helpers ---------- */
-function imgUrl(f) { return CFG.ITEM_IMG_BASE + f; }
+// custom items carry an absolute bucket URL; everything else is a local filename
+function imgUrl(f) { return /^https?:/.test(f) ? f : CFG.ITEM_IMG_BASE + f; }
 // Item names carry punctuation ("Room Pin - Oogie's Lair", "Lanyard - Black"),
 // so a plain substring match misses what people type ("oogie lair"). Strip the
 // punctuation and require every word, in any order.

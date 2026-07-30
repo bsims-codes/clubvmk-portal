@@ -90,6 +90,9 @@ async function loadStatic() {
     }
     for (const id in P.catalog) P.catalog[id].r = map[baseItemId(id)] || "common";
   } catch (e) { /* keep baked rarities */ }
+  // after the override pass: custom items aren't in that table, so the
+  // "not listed means common" rule above would flatten every one of them
+  await window.mergeCustomItems(sb, P.catalog);
 }
 
 async function loadPlayers() {
@@ -177,7 +180,8 @@ function wireItemPicker(inputId, listId, poolFn, counts) {
 const ownedPool = () => P.inv.map((r) => P.catalog[r.item_id] || { id: r.item_id, n: r.item_id })
                              .filter(Boolean);
 const allPool = () => Object.values(P.catalog);
-const imgUrl = (f) => CFG.ITEM_IMG_BASE + f;
+// custom items carry an absolute bucket URL; everything else is a local filename
+const imgUrl = (f) => (/^https?:/.test(f) ? f : CFG.ITEM_IMG_BASE + f);
 
 /* ---------- full inventory, with when each item was picked up ---------- */
 function invRows() {

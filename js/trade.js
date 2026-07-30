@@ -141,6 +141,9 @@ async function loadCatalog() {
     }
     for (const id in T.catalog) T.catalog[id].r = map[baseItemId(id)] || "common";
   } catch (e) { console.warn("overrides load failed:", e.message); }
+  // after the overrides: custom items aren't in that table, and its
+  // "not listed means common" rule would flatten every one of them
+  await window.mergeCustomItems(sb, T.catalog);
   // only nameable items in a public rarity are worth searching
   T.list = Object.values(T.catalog)
     .filter((it) => (it.n || "").trim() && PUBLIC_RARITY.has(it.r));
