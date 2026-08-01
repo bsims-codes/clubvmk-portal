@@ -4,7 +4,22 @@
 const CFG = window.CLUBVMK;
 const sb = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY);
 const RARITY = ["legendary", "epic", "rare", "uncommon", "common"];
-const FEATURED_MAX = 8;        // how many items a showcase can hold (keep in sync with the bot)
+// Card layouts — keep in sync with bot.CARD_LAYOUTS. `max` drives the showcase
+// slot count, so the picker below changes how many items you can feature.
+const CARD_LAYOUTS = {
+  classic: { label: "Classic", max: 8,  blurb: "8 items, with their names", cost: 0 },
+  gallery: { label: "Gallery", max: 15, blurb: "15 items, pictures only", cost: 25 },
+};
+const DEFAULT_CARD_LAYOUT = "classic";
+// Highlights that can be shown or hidden on the card (bot.CARD_HIGHLIGHTS).
+const CARD_HIGHLIGHTS = [
+  ["total", "Total items"], ["unique", "Unique items"], ["catches", "Catches"],
+  ["yeti", "Yeti Credits"], ["club", "Club Coins"], ["fastest", "Fastest grab"],
+  ["rarity", "Rarity breakdown"],
+];
+// How many showcase slots the current draft has.
+const featMax = () =>
+  (CARD_LAYOUTS[S.draft?.card_layout] || CARD_LAYOUTS[DEFAULT_CARD_LAYOUT]).max;
 const FEATURED_PER_ROW = 4;    // slots per row, matching the rendered card's grid
 const $ = (s) => document.querySelector(s);
 
@@ -36,14 +51,14 @@ const ownedCount = (id) => S.inv.find((r) => r.item_id === id)?.count || 0;
 const featCount = (id) => S.draft.featured.filter((x) => x === id).length;
 
 // Mirror of the bot's clamp_featured(): drop unknown/unowned ids, allow a
-// duplicate only up to the number of copies held, then cap at FEATURED_MAX.
+// duplicate only up to the number of copies held, then cap at the layout's max.
 function clampFeatured(feat) {
   const out = [], used = {};
   for (const id of Array.isArray(feat) ? feat : []) {
     const n = used[id] || 0;
     if (!showableItem(id) || n >= ownedCount(id)) continue;
     out.push(id); used[id] = n + 1;
-    if (out.length >= FEATURED_MAX) break;
+    if (out.length >= featMax()) break;
   }
   return out;
 }
@@ -220,13 +235,22 @@ async function loadData() {
   // does the profiles table have the hidden_titles column yet? (gates the titles feature)
   try { const { error } = await sb.from("profiles").select("hidden_titles").limit(1); S.hasHidden = !error; }
   catch (e) { S.hasHidden = false; }
+  try { const { error } = await sb.from("profiles").select("card_layout").limit(1); S.hasCard = !error; }
+  catch (e) { S.hasCard = false; }
+  S.layoutsOwned = Array.isArray(prof?.layouts_owned) ? prof.layouts_owned : [];
   S.draft = {
     theme: prof?.theme || CFG.DEFAULT_THEME,
     accent_color: prof?.accent_color || null,
-    featured: clampFeatured(prof?.featured),
+    card_layout: CARD_LAYOUTS[prof?.card_layout] ? prof.card_layout : DEFAULT_CARD_LAYOUT,
+    // stored empty = show everything, which is what an untouched card does
+    card_stats: Array.isArray(prof?.card_stats) && prof.card_stats.length
+      ? prof.card_stats.slice() : CARD_HIGHLIGHTS.map(([k]) => k),
+    featured: [],
     bio: prof?.bio || "",
     hidden_titles: Array.isArray(prof?.hidden_titles) ? prof.hidden_titles.slice() : [],
   };
+  // clamped after the draft exists, since the cap depends on the chosen layout
+  S.draft.featured = clampFeatured(prof?.featured);
   S.saved = JSON.stringify(S.draft);
   // unlock state (mirrored from the bot): purchased/granted themes + inventory stats
   S.themesOwned = Array.isArray(prof?.themes_owned) ? prof.themes_owned : [];
@@ -289,7 +313,7 @@ function wireEditor() {
 }
 
 /* ---------- render everything ---------- */
-function renderAll() { renderThemes(); renderTitles(); renderFeatured(); renderRarityFilter(); renderInv(); renderCombine(); renderPreview(); syncSaveState(); }
+function renderAll() { renderThemes(); renderCardStyle(); renderTitles(); renderFeatured(); renderRarityFilter(); renderInv(); renderCombine(); renderPreview(); syncSaveState(); }
 
 /* ============================================================
    Magic combining — a straight port of the bot's plan_combine().
@@ -474,6 +498,88 @@ function earnedTitles() {
   if (bestTotal) out.push({ cat: "total", title: bestTotal });
   return out;
 }
+/* ---------- card style: showcase layout + which highlights to draw ---------- */
+function ownsLayout(key) {
+  return !CARD_LAYOUTS[key].cost || (S.layoutsOwned || []).includes(key);
+}
+
+async function buyLayout(key) {
+  const cost = CARD_LAYOUTS[key].cost;
+  if (!confirm(`Unlock the ${CARD_LAYOUTS[key].label} card for ${cost} coins?
+
+` +
+               `Club Coins are spent first, Yeti Credits top up the rest.`)) return;
+  const { error } = await sb.from("layout_purchases")
+    .insert({ discord_id: S.discordId, guild_id: S.guild, layout: key });
+  if (error) return toast("Couldn't ask for that: " + error.message, true);
+  toast("Asking the bot to unlock it… this takes a few seconds.");
+  // the bot charges the coins and writes layouts_owned back; pick it up shortly
+  setTimeout(async () => {
+    const { data } = await sb.from("profiles").select("layouts_owned,card_layout")
+      .eq("guild_id", S.guild).maybeSingle();
+    S.layoutsOwned = Array.isArray(data?.layouts_owned) ? data.layouts_owned : S.layoutsOwned;
+    if (ownsLayout(key)) {
+      S.draft.card_layout = key;
+      S.saved = JSON.stringify(S.draft);      // the bot already stored it
+      toast(`${CARD_LAYOUTS[key].label} unlocked! ✨`);
+    } else {
+      toast("That didn't go through — check you have enough coins.", true);
+    }
+    renderCardStyle(); renderFeatured(); renderPreview(); syncSaveState();
+  }, 9000);
+}
+
+function renderCardStyle() {
+  const panel = $("#cardPanel");
+  if (panel) panel.style.display = S.hasCard ? "" : "none";
+  if (!S.hasCard) return;
+  const cur = S.draft.card_layout || DEFAULT_CARD_LAYOUT;
+  const note = $("#cardNote");
+  if (note) note.textContent = `${CARD_LAYOUTS[cur].label} · ${featMax()} slots`;
+
+  const grid = $("#layoutGrid");
+  if (grid) {
+    grid.innerHTML = Object.entries(CARD_LAYOUTS).map(([key, l]) => {
+      const owned = ownsLayout(key);
+      const price = owned ? "" : `<span class="price">🪙 ${l.cost} to unlock</span>`;
+      return `<button class="layout-opt${key === cur ? " on" : ""}${owned ? "" : " locked"}"
+                data-k="${key}"><b>${l.label}</b><small>${l.blurb}</small>${price}</button>`;
+    }).join("");
+    grid.querySelectorAll(".layout-opt").forEach((b) => {
+      b.onclick = () => {
+        const key = b.dataset.k;
+        if (!ownsLayout(key)) return buyLayout(key);
+        S.draft.card_layout = key;
+        // a smaller card can't hold as many, so trim to what it will actually show
+        S.draft.featured = S.draft.featured.slice(0, featMax());
+        touch(); renderCardStyle(); renderFeatured(); renderInv(); renderPreview();
+      };
+    });
+  }
+
+  const box = $("#highlightBox");
+  if (box) {
+    const on = new Set(S.draft.card_stats || []);
+    box.innerHTML = CARD_HIGHLIGHTS.map(([k, label]) =>
+      `<label class="title-chip"><input type="checkbox" data-h="${k}"${on.has(k) ? " checked" : ""}/>
+        <span>${label}</span></label>`).join("");
+    box.querySelectorAll("input[data-h]").forEach((cb) => {
+      cb.onchange = () => {
+        const k = cb.dataset.h;
+        const set = new Set(S.draft.card_stats || []);
+        cb.checked ? set.add(k) : set.delete(k);
+        // the tile row can't be empty — the card would have a blank band
+        const tiles = [...set].filter((x) => x !== "rarity");
+        if (!tiles.length) { cb.checked = true; return toast("Keep at least one stat tile.", true); }
+        S.draft.card_stats = CARD_HIGHLIGHTS.map(([x]) => x).filter((x) => set.has(x));
+        touch(); renderPreview();
+      };
+    });
+  }
+  const fm = $("#featMaxNote");
+  if (fm) fm.textContent = `up to ${featMax()}`;
+}
+
 function renderTitles() {
   const panel = $("#titlesPanel"); if (panel) panel.style.display = S.hasHidden ? "" : "none";
   const box = $("#titlesBox"); if (!box || !S.hasHidden) return;
@@ -531,7 +637,7 @@ function renderThemes() {
 function renderFeatured() {
   const row = $("#featuredRow"); row.innerHTML = "";
   row.style.setProperty("--feat-cols", FEATURED_PER_ROW);   // wrap like the rendered card
-  for (let i = 0; i < FEATURED_MAX; i++) {
+  for (let i = 0; i < featMax(); i++) {
     const id = S.draft.featured[i];
     const it = id && showableItem(id);
     const slot = document.createElement("div");
@@ -567,9 +673,9 @@ function renderFeatured() {
   }
   const used = S.draft.featured.filter(Boolean).length;
   const note = $("#featMaxNote");
-  if (note) note.textContent = `${used} of ${FEATURED_MAX}`;
+  if (note) note.textContent = `${used} of ${featMax()}`;
   const fill = $("#featFill");
-  if (fill) fill.style.width = `${Math.round((used / FEATURED_MAX) * 100)}%`;
+  if (fill) fill.style.width = `${Math.round((used / featMax()) * 100)}%`;
 }
 
 function dropInvOnSlot(i, itemId) {
@@ -579,7 +685,7 @@ function dropInvOnSlot(i, itemId) {
   const owned = ownedCount(itemId);                       // dupes are fine — spare copies aren't
   if (f.filter((x) => x === itemId).length > owned)
     return toast(owned ? `You only own ${owned}× that item.` : "You don't own that item.", true);
-  S.draft.featured = f.slice(0, FEATURED_MAX);
+  S.draft.featured = f.slice(0, featMax());
   touch(); renderFeatured(); renderInv();
 }
 
@@ -588,7 +694,7 @@ function moveFeatured(from, to) {
   if (from < 0 || from >= f.length) return;
   const [x] = f.splice(from, 1);
   f.splice(Math.max(0, Math.min(to, f.length)), 0, x);
-  S.draft.featured = f.slice(0, FEATURED_MAX);
+  S.draft.featured = f.slice(0, featMax());
   touch(); renderFeatured(); renderInv();
 }
 
@@ -682,7 +788,7 @@ function showItemMenu(x, y, id) {
   const m = $("#ctxMenu");
   const rows = [`<div class="ctx-head">Feature: ${esc(it.n)}</div>`];
   const acts = [];
-  for (let i = 0; i < FEATURED_MAX; i++) {
+  for (let i = 0; i < featMax(); i++) {
     const occId = S.draft.featured[i];
     const occ = occId ? (occId === id ? "★ this item" : (showableItem(occId)?.n || "item")) : "empty";
     rows.push(`<button class="ctx-item" data-i="${acts.length}">Slot ${i + 1} <span class="ctx-sub">${esc(occ)}</span></button>`);
@@ -714,8 +820,8 @@ function toggleFeature(id) {
     const i = S.draft.featured.indexOf(id);
     if (i >= 0) S.draft.featured.splice(i, 1);
     else return;                                  // owns none of it
-  } else if (S.draft.featured.length >= FEATURED_MAX) {
-    return toast(`Showcase is full (${FEATURED_MAX}). Remove one first.`);
+  } else if (S.draft.featured.length >= featMax()) {
+    return toast(`Showcase is full (${featMax()}). Remove one first.`);
   } else {
     S.draft.featured.push(id);
   }
@@ -750,6 +856,12 @@ async function save() {
     featured: S.draft.featured, updated_by: "portal", updated_at: new Date().toISOString(),
   };
   if (S.hasHidden) row.hidden_titles = S.draft.hidden_titles || [];
+  if (S.hasCard) {
+    row.card_layout = S.draft.card_layout;
+    // all-selected is stored as empty: "show everything" shouldn't need a list
+    const all = CARD_HIGHLIGHTS.length === (S.draft.card_stats || []).length;
+    row.card_stats = all ? [] : (S.draft.card_stats || []);
+  }
   const { error } = await sb.from("profiles").upsert(row, { onConflict: "discord_id,guild_id" });
   if (error) return toast("Save failed: " + error.message, true);
   S.saved = JSON.stringify(S.draft);
