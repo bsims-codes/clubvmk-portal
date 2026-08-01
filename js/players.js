@@ -331,6 +331,21 @@ function renderDetail() {
       </div>
 
       <div class="tool">
+        <h3>🎁 Gift a crate</h3>
+        <p>Posts a crate in the spawn channel with this player's name on it — only they can
+          open it, and the pull is announced for everyone to see.</p>
+        <div class="row">
+          <label class="fld"><span>Rarity</span>
+            <select id="crTier">
+              ${RARITY.map((r) => `<option value="${r}"${r === "legendary" ? " selected" : ""}>${r}</option>`).join("")}
+            </select></label>
+          <button class="btn gold" id="crGo">Send crate</button>
+        </div>
+        <input id="crNote" class="notein" type="text" maxlength="300"
+               placeholder="Note shown on the crate — e.g. why they're getting it (optional)" />
+      </div>
+
+      <div class="tool">
         <h3>🪙 Adjust coins</h3>
         <p>Negative removes. The bot refuses to take a balance below zero.</p>
         <div class="row">
@@ -425,6 +440,9 @@ function renderDetail() {
                           note: note("giAnn", "giNote") },
                 `take ${P.catalog[id]?.n || id}`);
   };
+  // the crate post is public by its nature, so its note needs no announce tick
+  $("#crGo").onclick = () => queueAction("crate", { rarity: v("crTier"), note: v("crNote") },
+                                         `${v("crTier")} crate`);
   $("#cGo").onclick = () => n("cAmt")
     ? queueAction("coins", { kind: v("cKind"), amount: n("cAmt"), announce: ann("cAnn"),
                              note: note("cAnn", "cNote") },
