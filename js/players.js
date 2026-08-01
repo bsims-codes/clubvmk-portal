@@ -6,6 +6,26 @@ const CFG = window.CLUBVMK;
 const sb = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY);
 const ADMIN_IDS = ["886570059974201405"];
 const RARITY = ["legendary", "epic", "rare", "uncommon", "common"];
+// Every clearable cooldown, in the order /cooldown lists them. Keep in step with
+// bot.COOLDOWN_INFO — a key missing here just can't be picked from the dropdown.
+const COOLDOWN_KEYS = [
+  ["flort", "🌀 Flort"], ["rps", "🪨 RPS"], ["esmeralda", "🔮 Esmeralda"],
+  ["slinkydog", "🐕 Slinky Dog"], ["vanellope", "🍭 Vanellope"], ["hades", "🔥 Hades"],
+  ["edna", "👓 Edna"], ["presto", "🐰 Presto"], ["petshop", "🐾 Pet shop"],
+  ["baymax", "🏥 Baymax"], ["russell", "🎈 Russell"], ["yzma", "🧪 Yzma"],
+  ["stitch", "🌀 Stitch"], ["dash", "⚡ Dash"], ["genie", "🧞 Genie"],
+  ["walle", "🤖 Wall-E"], ["maleficent", "⚔️ Maleficent"], ["gator", "🐊 Gator"],
+  ["scar", "🦁 Scar"], ["ursula", "🐙 Ursula"], ["cinderella", "🥿 Cinderella"],
+  ["daily", "📅 Daily"], ["frozen", "❄️ Frozen (Elsa)"],
+];
+
+/* "ready in 3h 12m" from the unix second the bot says it frees up. */
+function coolLeft(readyAt) {
+  const s = Math.round(Number(readyAt) - Date.now() / 1000);
+  if (!isFinite(s) || s <= 0) return null;
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+  return h ? `${h}h ${m}m` : m ? `${m}m` : `${s}s`;
+}
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -250,6 +270,22 @@ function wireInventory() {
   });
 }
 
+/* Cooldown picker for one player: anything currently running is listed first
+   with how long is left, so the one you came to clear is the one at the top. */
+function cooldownOptions(p) {
+  const live = (p && p.cooldowns) || {};
+  const running = [], idle = [];
+  for (const [key, label] of COOLDOWN_KEYS) {
+    const left = live[key] != null ? coolLeft(live[key]) : null;
+    (left ? running : idle).push(
+      `<option value="${esc(key)}">${esc(label)}${left ? ` — ${left} left` : ""}</option>`);
+  }
+  const n = running.length;
+  return `<option value="all">🧹 All${n ? ` (${n} running)` : " (none running)"}</option>`
+    + (running.length ? `<optgroup label="On cooldown now">${running.join("")}</optgroup>` : "")
+    + `<optgroup label="Not running">${idle.join("")}</optgroup>`;
+}
+
 /* ---------- detail + tools ---------- */
 function renderDetail() {
   const p = P.sel;
@@ -379,8 +415,8 @@ function renderDetail() {
         <p>Give back a cooldown a bug or an outage ate. Announce it so the server
           knows why they're going again.</p>
         <div class="row">
-          <label class="fld grow"><span>Cooldown key</span>
-            <input id="cdKey" type="text" value="all" placeholder="genie, dash, daily… or all" /></label>
+          <label class="fld grow"><span>Cooldown</span>
+            <select id="cdKey">${cooldownOptions(p)}</select></label>
           <button class="btn" id="cdGo">Clear</button>
         </div>
         <label class="ann"><input type="checkbox" id="cdAnn" /> Announce in the server</label>
