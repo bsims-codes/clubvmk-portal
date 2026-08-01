@@ -54,6 +54,8 @@ const R = {
   inv: {},               // item_id -> count, current guild
   pot: [],               // chosen item_ids (length <= NEED)
   page: 0, q: "", cat: "all", rar: "all", sort: "copies_desc", dupOnly: false,
+  order: null,           // id -> fixed position, so cooking doesn't reshuffle the grid
+  justCooked: new Set(), // ids touched by a cook this session (kept visible)
   busy: false,
 };
 
@@ -130,25 +132,16 @@ async function loadInv() {
   R.inv = {};
   for (const r of data) if (r.guild_id === R.guild) R.inv[r.item_id] = r.count;
   R.pot = [];
+  R.order = null;            // fresh inventory — sort it properly again
+  R.justCooked = new Set();
   renderGuilds();
   renderAll();
 }
 
-/* Everything cookable — any rarity you own — after the search/filter controls. */
-function pickable() {
-  const out = [];
-  for (const id in R.inv) {
-    const it = R.catalog[id];
-    if (!it) continue;
-    if (R.dupOnly && R.inv[id] < 2) continue;
-    if (R.cat !== "all" && it.c !== R.cat) continue;
-    if (R.rar !== "all" && it.r !== R.rar) continue;
-    if (!nameMatches(it.n, R.q)) continue;
-    out.push({ id, count: R.inv[id], it });
-  }
+const SORTS = (() => {
   const byName = (a, b) => a.it.n.localeCompare(b.it.n);
   const rIdx = (x) => RARITY.indexOf(x.it.r);
-  const sorts = {
+  return {
     copies_desc: (a, b) => b.count - a.count || byName(a, b),
     copies_asc: (a, b) => a.count - b.count || byName(a, b),
     rarity_desc: (a, b) => rIdx(a) - rIdx(b) || byName(a, b),
@@ -156,7 +149,46 @@ function pickable() {
     az: byName,
     za: (a, b) => byName(b, a),
   };
-  return out.sort(sorts[R.sort] || sorts.copies_desc);
+})();
+
+/* Fix each item's position once per sort mode.
+
+   Cooking changes counts, and the default sort is "most copies first" — so
+   re-sorting after every cook flings the item you just used from the front of
+   the list into the long tail of single copies, pages away. It reads as the
+   item vanishing. Positions are pinned here instead, and only recomputed when
+   the player actually changes the sort (or the inventory is reloaded). */
+function ensureOrder() {
+  if (R.order) return;
+  const all = [];
+  for (const id in R.inv) {
+    const it = R.catalog[id];
+    if (it) all.push({ id, count: R.inv[id], it });
+  }
+  all.sort(SORTS[R.sort] || SORTS.copies_desc);
+  R.order = {};
+  all.forEach((r, i) => { R.order[r.id] = i; });
+}
+
+/* Everything cookable — any rarity you own — after the search/filter controls. */
+function pickable() {
+  ensureOrder();
+  const out = [];
+  for (const id in R.inv) {
+    const it = R.catalog[id];
+    if (!it) continue;
+    // "duplicates only" would swallow an item you just cooked down to its last
+    // copy — the one moment you most want to see what happened to it
+    if (R.dupOnly && R.inv[id] < 2 && !R.justCooked.has(id)) continue;
+    if (R.cat !== "all" && it.c !== R.cat) continue;
+    if (R.rar !== "all" && it.r !== R.rar) continue;
+    if (!nameMatches(it.n, R.q)) continue;
+    out.push({ id, count: R.inv[id], it });
+  }
+  // anything with no pinned position is newly arrived (the cook's reward) — show
+  // it first rather than burying it
+  const pos = (r) => (r.id in R.order ? R.order[r.id] : -1);
+  return out.sort((a, b) => pos(a) - pos(b));
 }
 
 const potCount = (id) => R.pot.filter((x) => x === id).length;
@@ -240,9 +272,11 @@ function renderGrid() {
   grid.innerHTML = slice.map((r) => {
     const inPot = potCount(r.id);
     const free = r.count - inPot;
-    return `<div class="inv-item${free <= 0 ? " maxed" : ""}" data-r="${esc(r.it.r)}" data-id="${esc(r.id)}">
+    const cooked = R.justCooked.has(r.id);
+    return `<div class="inv-item${free <= 0 ? " maxed" : ""}${cooked ? " cooked" : ""}" data-r="${esc(r.it.r)}" data-id="${esc(r.id)}">
       <span class="ct${r.count > 1 ? " dup" : ""}">×${r.count}</span>
       ${inPot ? `<span class="inpot">in pot ${inPot}</span>` : ""}
+      ${cooked && !inPot ? `<span class="cookedtag">just cooked</span>` : ""}
       <img loading="lazy" src="${imgUrl(r.it.img)}" alt="" />
       <div class="nm">${esc(r.it.n)}</div>
       <span class="add">${free > 0 ? "+ Add to pot" : "none free"}</span>
@@ -340,7 +374,10 @@ async function cook() {
     }
     // the bot has already taken the commons and handed over the reward; keep
     // our copy in step rather than waiting up to 45s for the next mirror sync
-    for (const id of R.pot) R.inv[id] = Math.max(0, (R.inv[id] || 0) - 1);
+    for (const id of R.pot) {
+      R.inv[id] = Math.max(0, (R.inv[id] || 0) - 1);
+      if (R.inv[id]) R.justCooked.add(id);   // still owned: keep it on screen
+    }
     for (const id in R.inv) if (!R.inv[id]) delete R.inv[id];
     if (row.gained_item) R.inv[row.gained_item] = (R.inv[row.gained_item] || 0) + 1;
     R.pot = [];
@@ -465,7 +502,8 @@ async function boot() {
     R.q = e.target.value; R.page = 0;
     clearTimeout(timer); timer = setTimeout(renderGrid, 120);
   };
-  $("#sort").onchange = (e) => { R.sort = e.target.value; R.page = 0; renderGrid(); };
+  // changing the sort is the one time a reshuffle is what the player asked for
+  $("#sort").onchange = (e) => { R.sort = e.target.value; R.order = null; R.page = 0; renderGrid(); };
   $("#dupOnly").onchange = (e) => { R.dupOnly = e.target.checked; R.page = 0; renderGrid(); };
   await loadCatalog();
   sb.auth.onAuthStateChange((_e, s) => render(s));

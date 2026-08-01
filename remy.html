@@ -79,6 +79,12 @@
     background:rgba(10,13,28,.72);color:var(--gold-soft);font-size:13px;font-weight:600;opacity:0;transition:.14s}
   .inv-item:hover .add{opacity:1}
   .inv-item.maxed{opacity:.42}
+  /* an item this session's cooking has drawn from — held in place so it can't
+     look like it vanished */
+  .inv-item.cooked{border-color:rgba(240,178,60,.55)}
+  .cookedtag{position:absolute;top:6px;left:6px;font-size:9.5px;letter-spacing:.03em;
+             padding:2px 6px;border-radius:999px;background:rgba(240,178,60,.16);
+             color:#f0b23c;border:1px solid rgba(240,178,60,.4)}
   .inv-item .inpot{position:absolute;top:6px;left:7px;font-size:10.5px;background:var(--gold);
     color:#2a1e05;font-weight:700;border-radius:99px;padding:1px 7px}
 
