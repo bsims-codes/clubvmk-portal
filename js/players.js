@@ -376,11 +376,16 @@ function renderDetail() {
 
       <div class="tool">
         <h3>⏱️ Clear cooldown</h3>
+        <p>Give back a cooldown a bug or an outage ate. Announce it so the server
+          knows why they're going again.</p>
         <div class="row">
           <label class="fld grow"><span>Cooldown key</span>
             <input id="cdKey" type="text" value="all" placeholder="genie, dash, daily… or all" /></label>
           <button class="btn" id="cdGo">Clear</button>
         </div>
+        <label class="ann"><input type="checkbox" id="cdAnn" /> Announce in the server</label>
+        <input id="cdNote" class="notein" type="text" maxlength="300"
+               placeholder="Add a message to the announcement (optional)" />
       </div>
     </div>
 
@@ -407,7 +412,8 @@ function renderDetail() {
   const note = (annId, id) => (ann(annId) ? v(id) : "");
   // the note only does anything alongside a tick, so mirror the checkbox state
   for (const [a, nId] of [["rfAnn", "rfNote"], ["giAnn", "giNote"],
-                          ["cAnn", "cNote"], ["thAnn", "thNote"]]) {
+                          ["cAnn", "cNote"], ["thAnn", "thNote"],
+                          ["cdAnn", "cdNote"]]) {
     const box = $("#" + a), input = $("#" + nId);
     const sync = () => { input.disabled = !box.checked; };
     box.addEventListener("change", sync);
@@ -455,7 +461,9 @@ function renderDetail() {
                                                         announce: ann("thAnn"),
                                                         note: note("thAnn", "thNote") },
                                              `revoke ${v("thKey")}`);
-  $("#cdGo").onclick = () => queueAction("cooldown", { key: v("cdKey") || "all" },
+  $("#cdGo").onclick = () => queueAction("cooldown",
+                                         { key: v("cdKey") || "all", announce: ann("cdAnn"),
+                                           note: note("cdAnn", "cdNote") },
                                          `clear ${v("cdKey") || "all"}`);
 }
 
