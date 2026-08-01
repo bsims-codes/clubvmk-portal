@@ -11,6 +11,9 @@ const CARD_LAYOUTS = {
   gallery: { label: "Gallery", max: 15, blurb: "15 items, pictures only", cost: 25 },
 };
 const DEFAULT_CARD_LAYOUT = "classic";
+// Selecting nothing is allowed and means "give all that room to the showcase".
+// Stored as ["none"] because an empty list has always meant "show everything".
+const CARD_STATS_NONE = "none";
 // Highlights that can be shown or hidden on the card (bot.CARD_HIGHLIGHTS).
 const CARD_HIGHLIGHTS = [
   ["total", "Total items"], ["unique", "Unique items"], ["catches", "Catches"],
@@ -243,8 +246,9 @@ async function loadData() {
     accent_color: prof?.accent_color || null,
     card_layout: CARD_LAYOUTS[prof?.card_layout] ? prof.card_layout : DEFAULT_CARD_LAYOUT,
     // stored empty = show everything, which is what an untouched card does
-    card_stats: Array.isArray(prof?.card_stats) && prof.card_stats.length
-      ? prof.card_stats.slice() : CARD_HIGHLIGHTS.map(([k]) => k),
+    card_stats: !Array.isArray(prof?.card_stats) || !prof.card_stats.length
+      ? CARD_HIGHLIGHTS.map(([k]) => k)                       // unset = show everything
+      : (prof.card_stats.includes(CARD_STATS_NONE) ? [] : prof.card_stats.slice()),
     featured: [],
     bio: prof?.bio || "",
     hidden_titles: Array.isArray(prof?.hidden_titles) ? prof.hidden_titles.slice() : [],
@@ -499,6 +503,14 @@ function earnedTitles() {
   return out;
 }
 /* ---------- card style: showcase layout + which highlights to draw ---------- */
+// [] = show everything, ["none"] = show nothing, otherwise the exact subset.
+function cardStatsWire() {
+  const picked = S.draft.card_stats || [];
+  if (!picked.length) return [CARD_STATS_NONE];
+  if (picked.length === CARD_HIGHLIGHTS.length) return [];
+  return picked;
+}
+
 function ownsLayout(key) {
   return !CARD_LAYOUTS[key].cost || (S.layoutsOwned || []).includes(key);
 }
@@ -568,11 +580,8 @@ function renderCardStyle() {
         const k = cb.dataset.h;
         const set = new Set(S.draft.card_stats || []);
         cb.checked ? set.add(k) : set.delete(k);
-        // the tile row can't be empty — the card would have a blank band
-        const tiles = [...set].filter((x) => x !== "rarity");
-        if (!tiles.length) { cb.checked = true; return toast("Keep at least one stat tile.", true); }
         S.draft.card_stats = CARD_HIGHLIGHTS.map(([x]) => x).filter((x) => set.has(x));
-        touch(); renderPreview();
+        touch(); renderCardStyle(); renderPreview();
       };
     });
   }
@@ -858,9 +867,7 @@ async function save() {
   if (S.hasHidden) row.hidden_titles = S.draft.hidden_titles || [];
   if (S.hasCard) {
     row.card_layout = S.draft.card_layout;
-    // all-selected is stored as empty: "show everything" shouldn't need a list
-    const all = CARD_HIGHLIGHTS.length === (S.draft.card_stats || []).length;
-    row.card_stats = all ? [] : (S.draft.card_stats || []);
+    row.card_stats = cardStatsWire();
   }
   const { error } = await sb.from("profiles").upsert(row, { onConflict: "discord_id,guild_id" });
   if (error) return toast("Save failed: " + error.message, true);
@@ -878,6 +885,11 @@ async function doRender(auto) {
   if (!auto) { $("#renderBtn").disabled = true; $("#renderBtn").textContent = "Rendering…"; }
   const preview = { theme: S.draft.theme, accent_color: S.draft.accent_color, featured: S.draft.featured, bio: S.draft.bio };
   if (S.hasHidden) preview.hidden_titles = S.draft.hidden_titles;
+  // the preview has to show the layout you're *considering*, not the saved one
+  if (S.hasCard) {
+    preview.card_layout = S.draft.card_layout;
+    preview.card_stats = cardStatsWire();
+  }
   const { data, error } = await sb.from("render_requests")
     .insert({ discord_id: S.discordId, guild_id: S.guild, preview }).select().single();
   if (error) { finishRender(); if (!auto) toast("Render request failed: " + error.message, true); return; }
