@@ -51,7 +51,12 @@ body{
 .brand-sub{font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--faint);align-self:center}
 @media(max-width:560px){.brand-sub{display:none}}
 
+.top-right{display:flex;align-items:center;gap:12px}
 .auth-slot{display:flex;align-items:center;gap:12px}
+/* tip jar — warm enough to spot, quiet enough not to fight the sign-in button */
+.coffee-chip{border-color:rgba(240,178,60,.35);color:var(--gold-soft);white-space:nowrap}
+.coffee-chip:hover{background:rgba(240,178,60,.12);border-color:var(--gold)}
+@media(max-width:560px){.coffee-chip span{display:none}}
 .who{display:flex;align-items:center;gap:10px}
 .who img{width:34px;height:34px;border-radius:50%;border:2px solid var(--gold);object-fit:cover}
 .who b{font-weight:600}
