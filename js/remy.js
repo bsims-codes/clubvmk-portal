@@ -18,6 +18,22 @@ const PER = 60;                       // items per page in the picker
 const RARITY = ["legendary", "epic", "rare", "uncommon", "common"];
 // rare-or-better is worth an "are you sure?" — what goes in never changes the roll
 const PRECIOUS = new Set(["rare", "epic", "legendary"]);
+// How long "cook it anyway" stands for. Filling a pot means three of these
+// prompts back to back, which trains people to click through the warning — the
+// opposite of what it's for. One deliberate confirmation, then trusted for a
+// while. Persisted so a reload mid-session doesn't start the nagging again.
+const PRECIOUS_OK_MS = 30 * 60 * 1000;
+const PRECIOUS_OK_KEY = "vmk_remy_precious_ok";
+
+function preciousAcknowledged() {
+  try {
+    return Date.now() < Number(localStorage.getItem(PRECIOUS_OK_KEY) || 0);
+  } catch (e) { return false; }
+}
+function acknowledgePrecious() {
+  try { localStorage.setItem(PRECIOUS_OK_KEY, String(Date.now() + PRECIOUS_OK_MS)); }
+  catch (e) { /* private mode — it just asks again, which is safe */ }
+}
 const RARITY_DOT = {
   legendary: "🟠", epic: "🟣", rare: "🔵", uncommon: "🟢", common: "⚪",
 };
@@ -240,9 +256,21 @@ function renderPot() {
   const warnEl = $("#potWarn");
   if (warnEl) {
     warnEl.className = risky.length ? "potwarn" : "potwarn hidden";
+    // This banner is the standing safety net — it shows every time, however
+    // recently the modal was accepted, so a rare in the pot is never silent.
     warnEl.innerHTML = risky.length
       ? `⚠️ There's ${risky.map((it) => `${RARITY_DOT[it.r]} <b>${esc(cap(it.r))}</b>`).join(" and ")}
-         in the pot. Cooking it doesn't change your odds.` : "";
+         in the pot. Cooking it doesn't change your odds.`
+        + (preciousAcknowledged()
+            ? ` <a href="#" id="askAgain" class="askagain">ask me each time</a>` : "")
+      : "";
+    const again = $("#askAgain");
+    if (again) again.onclick = (e) => {
+      e.preventDefault();
+      try { localStorage.removeItem(PRECIOUS_OK_KEY); } catch (err) {}
+      toast("Remy will check with you on every rare again.");
+      renderPot();
+    };
   }
   const btn = $("#cookBtn");
   btn.disabled = R.busy || R.pot.length !== NEED;
@@ -304,10 +332,13 @@ function addToPot(id) {
   const it = R.catalog[id];
   // rare or better is a straight loss — the roll is the same whatever goes in,
   // so make it a deliberate choice rather than one stray click
-  if (it && PRECIOUS.has(it.r)) return confirmPrecious(it, () => {
-    R.pot.push(id);
-    renderAll();
-  });
+  if (it && PRECIOUS.has(it.r) && !preciousAcknowledged()) {
+    return confirmPrecious(it, () => {
+      acknowledgePrecious();
+      R.pot.push(id);
+      renderAll();
+    });
+  }
   R.pot.push(id);
   renderAll();
 }
@@ -323,6 +354,7 @@ function confirmPrecious(it, onYes) {
       <p class="who">${RARITY_DOT[it.r]} <b class="r-${esc(it.r)}">${esc(it.n)}</b></p>
       <p class="why">It <b>doesn't change your odds</b> — what comes out of the pot is the
         same roll whatever you put in. Cooking this one just loses it.</p>
+      <p class="why sub">Say yes and Remy won't ask again for 30 minutes.</p>
       <div class="acts">
         <button class="btn ghost" id="mNo">Keep it</button>
         <button class="btn danger" id="mYes">Cook it anyway</button>
