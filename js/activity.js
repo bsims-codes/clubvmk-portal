@@ -14,7 +14,7 @@ const RARITY = ["legendary", "epic", "rare", "uncommon", "common"];
 const D = {
   since: 30, commands: [], players: [], targets: [], recent: [], names: {},
   trades: [], catalog: {},
-  playerSort: { k: "uses", dir: -1 }, tgtSort: { k: "times", dir: -1 },
+  playerSort: { k: "uses", dir: -1 }, tgtSort: { k: "last_ts", dir: -1 },
 };
 
 const baseItemId = (id) => (id.includes("*") ? id.slice(0, id.lastIndexOf("*")) : id);
@@ -205,7 +205,7 @@ function sortRows(rows, s, nameKey) {
   return rows.sort((a, b) => {
     let av = a[s.k], bv = b[s.k];
     if (s.k === nameKey) { av = String(av || "").toLowerCase(); bv = String(bv || "").toLowerCase(); }
-    else if (s.k === "last_used") { av = new Date(av || 0); bv = new Date(bv || 0); }
+    else if (s.k === "last_used" || s.k === "last_ts") { av = new Date(av || 0); bv = new Date(bv || 0); }
     else { av = Number(av || 0); bv = Number(bv || 0); }
     return (av < bv ? -1 : av > bv ? 1 : 0) * s.dir;
   });
@@ -234,19 +234,30 @@ function renderTargetFilter() {
 
 function renderTargets() {
   const cmd = $("#tgtCmd").value, q = $("#tgtSearch").value.trim().toLowerCase();
+  // `last_ts` (when the pair last happened) came with a later revision of
+  // activity_targets. Until that SQL is re-run the column simply isn't in the
+  // result, so fall back to the old busiest-first order rather than sorting
+  // every row by an undefined. D.tgtSort itself is left alone, so recency
+  // takes over on its own once the function is updated.
+  const hasTs = !D.targets.length || "last_ts" in D.targets[0];
+  const sort = (!hasTs && D.tgtSort.k === "last_ts") ? { k: "times", dir: -1 } : D.tgtSort;
+  $("#tgtNote").innerHTML = hasTs ? ""
+    : `Newest-first needs <code>webportal/schema_activity.sql</code> re-run in Supabase —
+       showing busiest first for now.`;
   let rows = D.targets.map((t) => ({
     ...t, actor_name: nameOf(t.actor), target_name: nameOf(t.target),
   }));
   if (cmd !== "all") rows = rows.filter((t) => t.command === cmd);
   if (q) rows = rows.filter((t) =>
     t.actor_name.toLowerCase().includes(q) || t.target_name.toLowerCase().includes(q));
-  rows = sortRows(rows, D.tgtSort, "actor_name");
+  rows = sortRows(rows, sort, "actor_name");
   const total = rows.reduce((a, t) => a + Number(t.times || 0), 0);
   $("#tgtTotal").textContent = `${rows.length} pairs · ${num(total)} actions`;
   $("#tgtTbl").querySelector("tbody").innerHTML = rows.map((t) =>
-    `<tr><td>/${esc(t.command)}</td><td>${esc(t.actor_name)}</td>
+    `<tr><td class="muted2">${esc(hasTs ? when(t.last_ts) : "—")}</td>
+     <td>/${esc(t.command)}</td><td>${esc(t.actor_name)}</td>
      <td>${esc(t.target_name)}</td><td class="num">${num(t.times)}</td></tr>`).join("")
-    || `<tr><td colspan="4" class="muted2">No targeted commands in this window.</td></tr>`;
+    || `<tr><td colspan="5" class="muted2">No targeted commands in this window.</td></tr>`;
 }
 
 /* Outcomes are plain strings from the bot; a couple of shapes get a colour so

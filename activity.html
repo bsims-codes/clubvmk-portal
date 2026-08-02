@@ -113,13 +113,15 @@
     <section class="blk">
       <h2 class="sec">🎯 Who did what to whom</h2>
       <p class="subtle">Every command aimed at another player — freezes, duels, trades, curses.
-        Filter by command, or search a name to see who targeted them.</p>
+        Newest first. Filter by command, or search a name to see who targeted them.</p>
+      <p class="warn" id="tgtNote"></p>
       <div class="toolbar">
         <select id="tgtCmd"><option value="all">All commands</option></select>
         <input id="tgtSearch" type="text" placeholder="Find a player (either side)…" />
         <span class="muted2" id="tgtTotal"></span>
       </div>
       <div class="tablewrap"><table id="tgtTbl"><thead><tr>
+        <th data-k="last_ts">Last</th>
         <th data-k="command">Command</th>
         <th data-k="actor_name">Who</th>
         <th data-k="target_name">Target</th>
