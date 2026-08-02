@@ -286,9 +286,21 @@ function cooldownOptions(p) {
     + `<optgroup label="Not running">${idle.join("")}</optgroup>`;
 }
 
+/* Is an Elsa freeze running on this player? The bot mirrors it in `cooldowns`
+   like any other timer, so it's the same "ready at" unix second — here it's when
+   they thaw. The mirror runs every ~45s, so treat this as "as of last sync" and
+   never gate the thaw button on it. */
+function freezeState(p) {
+  const left = coolLeft(((p && p.cooldowns) || {}).frozen);
+  return left
+    ? { on: true, text: `❄️ <b>Frozen</b> — thaws in about ${esc(left)}.` }
+    : { on: false, text: "☀️ Not frozen as of the last sync (~45s)." };
+}
+
 /* ---------- detail + tools ---------- */
 function renderDetail() {
   const p = P.sel;
+  const frz = freezeState(p);
   const total = P.inv.reduce((n, r) => n + Number(r.count || 0), 0);
   const byTier = {};
   for (const r of P.inv) {
@@ -301,7 +313,8 @@ function renderDetail() {
   $("#detail").innerHTML = `
     <div class="who"><h2>${esc(p.display_name || p.discord_id)}</h2>
       <span class="muted2">${esc(p.guild_name || p.guild_id)}</span>
-      <span class="muted2">· id ${esc(p.discord_id)}</span></div>
+      <span class="muted2">· id ${esc(p.discord_id)}</span>
+      ${frz.on ? `<span class="muted2">· ❄️ frozen</span>` : ""}</div>
     <div class="stats">
       <div class="stat wallet"><div class="v">${num(p.club_coins)}</div><div class="k">🪙 Club Coins</div></div>
       <div class="stat wallet"><div class="v">${num(p.yeti_credits)}</div><div class="k">❄️ Yeti Credits</div></div>
@@ -423,6 +436,19 @@ function renderDetail() {
         <input id="cdNote" class="notein" type="text" maxlength="300"
                placeholder="Add a message to the announcement (optional)" />
       </div>
+
+      <div class="tool">
+        <h3>❄️ Clear a freeze</h3>
+        <p>Thaw an Elsa freeze early, without making them spend a Baymax heal on it.</p>
+        <p class="hintline">${frz.text}</p>
+        <div class="row">
+          <button class="btn${frz.on ? " gold" : ""}" id="frzGo">Thaw now</button>
+        </div>
+        <label class="ann"><input type="checkbox" id="frzAnn" checked /> Announce in the server
+          <span class="muted2">— they were frozen in public, so the thaw reads better in public too</span></label>
+        <input id="frzNote" class="notein" type="text" maxlength="300"
+               placeholder="Add a message to the announcement (optional)" />
+      </div>
     </div>
 
     <datalist id="ownedList"></datalist>
@@ -449,7 +475,7 @@ function renderDetail() {
   // the note only does anything alongside a tick, so mirror the checkbox state
   for (const [a, nId] of [["rfAnn", "rfNote"], ["giAnn", "giNote"],
                           ["cAnn", "cNote"], ["thAnn", "thNote"],
-                          ["cdAnn", "cdNote"]]) {
+                          ["cdAnn", "cdNote"], ["frzAnn", "frzNote"]]) {
     const box = $("#" + a), input = $("#" + nId);
     const sync = () => { input.disabled = !box.checked; };
     box.addEventListener("change", sync);
@@ -501,6 +527,12 @@ function renderDetail() {
                                          { key: v("cdKey") || "all", announce: ann("cdAnn"),
                                            note: note("cdAnn", "cdNote") },
                                          `clear ${v("cdKey") || "all"}`);
+  // Same queue action as any cooldown — a freeze is stored as the "frozen" timer,
+  // so clearing it is exactly what /baymax does to thaw someone.
+  $("#frzGo").onclick = () => queueAction("cooldown",
+                                          { key: "frozen", announce: ann("frzAnn"),
+                                            note: note("frzAnn", "frzNote") },
+                                          "thaw freeze");
 }
 
 /* ---------- boot ---------- */
