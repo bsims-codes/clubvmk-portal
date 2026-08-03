@@ -35,7 +35,12 @@ async function loadCatalog() {
       for (const o of data || []) map[o.item_id] = o.tier;
       if (!data || data.length < 1000) break;
     }
-    for (const id in D.catalog) D.catalog[id].r = map[baseItemId(id)] || "common";
+  // A curated tier wins; anything the curator has not judged keeps the rarity
+  // baked into the catalogue — which is "hold" for a fresh import, so new items
+  // are held here exactly as the bot holds them. Defaulting to common instead
+  // put 124 unreviewed items in the drop pool.
+    for (const id in D.catalog)
+      D.catalog[id].r = map[baseItemId(id)] || D.catalog[id].r || "common";
   } catch (e) { /* keep the baked rarities */ }
   // after the overrides: custom items aren't in that table, and its
   // "not listed means common" rule would flatten every one of them

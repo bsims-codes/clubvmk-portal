@@ -150,7 +150,9 @@ async function applyRarityOverrides() {
     }
     // A combined Magic ("pin:3703*5") inherits its base pin's rarity — the
     // overrides table only ever lists base ids.
-    for (const id in S.catalog) S.catalog[id].r = map[baseItemId(id)] || "common";
+    // curated wins; unjudged keeps its baked rarity ("hold" for a fresh import)
+    for (const id in S.catalog)
+      S.catalog[id].r = map[baseItemId(id)] || S.catalog[id].r || "common";
   } catch (e) { console.warn("overrides load failed — keeping baked rarities as fallback:", e.message); }
 }
 

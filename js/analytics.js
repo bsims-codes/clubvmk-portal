@@ -64,15 +64,17 @@ async function loadCatalog() {
     D.held = 0; D.crafted = 0;
     // Combined Magics ("pin:3703*5") are crafted, never spawned, so they don't
     // belong in catalogue coverage — but they do inherit the base pin's rarity.
+    // A curated tier wins; anything unjudged keeps its baked rarity, which is
+    // "hold" for a fresh import. Flattening everything to common first meant an
+    // unreviewed item counted as a live common here and in the game.
     for (const id in D.catalog) {
       if (id.includes("*")) { delete D.catalog[id]; D.crafted++; continue; }
-      D.catalog[id].r = "common";
+      D.catalog[id].r = map[id] || D.catalog[id].r || "common";
     }
-    for (const id in map) {
-      if (!D.catalog[id]) continue;
-      if (map[id] === "remove") { delete D.catalog[id]; D.removed++; }
-      else if (map[id] === "hold") { delete D.catalog[id]; D.held++; }
-      else D.catalog[id].r = map[id];
+    for (const id of Object.keys(D.catalog)) {
+      const t = D.catalog[id].r;
+      if (t === "remove") { delete D.catalog[id]; D.removed++; }
+      else if (t === "hold") { delete D.catalog[id]; D.held++; }
     }
   } catch (e) { /* fetch failed — keep baked rarities as fallback */ }
   try {
