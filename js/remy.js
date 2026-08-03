@@ -16,7 +16,26 @@ const $ = (s) => document.querySelector(s);
 const NEED = CFG.REMY_NEED || 3;
 const PER = 60;                       // items per page in the picker
 const RARITY = ["legendary", "epic", "rare", "uncommon", "common"];
-// rare-or-better is worth an "are you sure?" — what goes in never changes the roll
+// Mirrors REMY_ODDS / REMY_INPUT_POINTS / REMY_POINT_GAIN in the bot's config.
+// Shown only as a forecast — the bot rolls it, and re-checks everything itself.
+const ODDS_BASE = { uncommon: 750, rare: 200, epic: 40, legendary: 10 };
+const ODDS_PTS = { common: 0, uncommon: 1, rare: 4, epic: 9, legendary: 16 };
+const ODDS_GAIN = { uncommon: 0, rare: 0.10, epic: 0.20, legendary: 0.40 };
+
+function potPoints(ids) {
+  return (ids || []).reduce((n, id) => n + (ODDS_PTS[(R.catalog[id] || {}).r] || 0), 0);
+}
+
+function oddsLine(points) {
+  const w = {}; let tot = 0;
+  for (const t in ODDS_BASE) { w[t] = ODDS_BASE[t] * (1 + points * ODDS_GAIN[t]); tot += w[t]; }
+  return ["uncommon", "rare", "epic", "legendary"].map((t) => {
+    const pct = (100 * w[t]) / tot;
+    return `${(+pct.toFixed(1))}% ${t}`;
+  }).join(" · ");
+}
+// rare-or-better is worth an "are you sure?": it does improve the roll now, but
+// never by enough to pay for itself
 const PRECIOUS = new Set(["rare", "epic", "legendary"]);
 // How long "cook it anyway" stands for. Filling a pot means three of these
 // prompts back to back, which trains people to click through the warning — the
@@ -253,6 +272,15 @@ function renderPot() {
   // a standing reminder while something rare-or-better is sitting in there
   const risky = [...new Set(R.pot)].map((id) => R.catalog[id])
     .filter((it) => it && PRECIOUS.has(it.r));
+  // the forecast moves as items go in, which is the whole point of what you
+  // feed him mattering
+  const oddsEl = $("#potOdds");
+  if (oddsEl) {
+    const pts = potPoints(R.pot);
+    oddsEl.textContent = `Out of the pot: ${oddsLine(pts)}`
+      + (pts ? `  ·  pot worth ${pts}` : "");
+  }
+
   const warnEl = $("#potWarn");
   if (warnEl) {
     warnEl.className = risky.length ? "potwarn" : "potwarn hidden";
@@ -260,7 +288,7 @@ function renderPot() {
     // recently the modal was accepted, so a rare in the pot is never silent.
     warnEl.innerHTML = risky.length
       ? `⚠️ There's ${risky.map((it) => `${RARITY_DOT[it.r]} <b>${esc(cap(it.r))}</b>`).join(" and ")}
-         in the pot. Cooking it doesn't change your odds.`
+         in the pot — it improves your odds, but never enough to pay for itself.`
         + (preciousAcknowledged()
             ? ` <a href="#" id="askAgain" class="askagain">ask me each time</a>` : "")
       : "";
@@ -330,8 +358,8 @@ function addToPot(id) {
   if (R.pot.length >= NEED) return toast("The pot's already full — hit Cook!", true);
   if (freeCount(id) <= 0) return toast("You've no more of that one free.", true);
   const it = R.catalog[id];
-  // rare or better is a straight loss — the roll is the same whatever goes in,
-  // so make it a deliberate choice rather than one stray click
+  // rare or better improves the roll but never pays for itself, so make it a
+  // deliberate choice rather than one stray click
   if (it && PRECIOUS.has(it.r) && !preciousAcknowledged()) {
     return confirmPrecious(it, () => {
       acknowledgePrecious();
@@ -352,8 +380,8 @@ function confirmPrecious(it, onYes) {
       <img src="${imgUrl(it.img)}" alt="" />
       <h3>Cook with a ${esc(cap(it.r))} item?</h3>
       <p class="who">${RARITY_DOT[it.r]} <b class="r-${esc(it.r)}">${esc(it.n)}</b></p>
-      <p class="why">It <b>doesn't change your odds</b> — what comes out of the pot is the
-        same roll whatever you put in. Cooking this one just loses it.</p>
+      <p class="why">It <b>does improve your odds</b> — but never enough to pay for itself,
+        so cooking this one is still a loss on average.</p>
       <p class="why sub">Say yes and Remy won't ask again for 30 minutes.</p>
       <div class="acts">
         <button class="btn ghost" id="mNo">Keep it</button>
