@@ -387,6 +387,13 @@ function renderDetail() {
           <label class="fld"><span>Rarity</span>
             <select id="crTier">
               ${RARITY.map((r) => `<option value="${r}"${r === "legendary" ? " selected" : ""}>${r}</option>`).join("")}
+              ${/* prizes are usually promised as "rare or better", so a crate can
+                    be too — otherwise honouring one means picking a single tier
+                    and being either stingy or too generous */ ""}
+              <optgroup label="or better">
+                ${RARITY.filter((r) => r !== "legendary")
+                        .map((r) => `<option value="${r}plus">${r} or better</option>`).join("")}
+              </optgroup>
             </select></label>
           <button class="btn gold" id="crGo">Send crate</button>
         </div>
