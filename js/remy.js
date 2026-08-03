@@ -16,24 +16,6 @@ const $ = (s) => document.querySelector(s);
 const NEED = CFG.REMY_NEED || 3;
 const PER = 60;                       // items per page in the picker
 const RARITY = ["legendary", "epic", "rare", "uncommon", "common"];
-// Mirrors REMY_ODDS / REMY_INPUT_POINTS / REMY_POINT_GAIN in the bot's config.
-// Shown only as a forecast — the bot rolls it, and re-checks everything itself.
-const ODDS_BASE = { uncommon: 750, rare: 200, epic: 40, legendary: 10 };
-const ODDS_PTS = { common: 0, uncommon: 1, rare: 4, epic: 9, legendary: 16 };
-const ODDS_GAIN = { uncommon: 0, rare: 0.10, epic: 0.20, legendary: 0.40 };
-
-function potPoints(ids) {
-  return (ids || []).reduce((n, id) => n + (ODDS_PTS[(R.catalog[id] || {}).r] || 0), 0);
-}
-
-function oddsLine(points) {
-  const w = {}; let tot = 0;
-  for (const t in ODDS_BASE) { w[t] = ODDS_BASE[t] * (1 + points * ODDS_GAIN[t]); tot += w[t]; }
-  return ["uncommon", "rare", "epic", "legendary"].map((t) => {
-    const pct = (100 * w[t]) / tot;
-    return `${(+pct.toFixed(1))}% ${t}`;
-  }).join(" · ");
-}
 // rare-or-better is worth an "are you sure?": it does improve the roll now, but
 // never by enough to pay for itself
 const PRECIOUS = new Set(["rare", "epic", "legendary"]);
@@ -272,15 +254,6 @@ function renderPot() {
   // a standing reminder while something rare-or-better is sitting in there
   const risky = [...new Set(R.pot)].map((id) => R.catalog[id])
     .filter((it) => it && PRECIOUS.has(it.r));
-  // the forecast moves as items go in, which is the whole point of what you
-  // feed him mattering
-  const oddsEl = $("#potOdds");
-  if (oddsEl) {
-    const pts = potPoints(R.pot);
-    oddsEl.textContent = `Out of the pot: ${oddsLine(pts)}`
-      + (pts ? `  ·  pot worth ${pts}` : "");
-  }
-
   const warnEl = $("#potWarn");
   if (warnEl) {
     warnEl.className = risky.length ? "potwarn" : "potwarn hidden";
