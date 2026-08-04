@@ -144,9 +144,19 @@ function renderList() {
 async function selectPlayer(p, quiet) {
   P.sel = p;
   if (!quiet) renderList();
-  const { data, error } = await sb.rpc("admin_player_items",
-    { target: p.discord_id, guild: p.guild_id });
-  P.inv = error ? [] : (data || []);
+  // PostgREST caps every response at 1000 rows — page through, or a big
+  // collection (5k+ uniques) silently loses everything past the first page.
+  const inv = [];
+  let failed = false;
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await sb.rpc("admin_player_items",
+      { target: p.discord_id, guild: p.guild_id })
+      .order("item_id").range(from, from + 999);
+    if (error) { failed = true; break; }
+    inv.push(...(data || []));
+    if (!data || data.length < 1000) break;
+  }
+  P.inv = failed ? [] : inv;
   renderDetail();
   if (!quiet) renderList();
 }
