@@ -630,6 +630,7 @@ function renderThemes() {
       else if (u.type === "buy") lock = `🔒 ❄️${u.cost}`;
       else if (u.type === "total") lock = `🔒 ${u.value} items`;
       else if (u.type === "rarity") lock = `🔒 ${u.value} ${u.tier}`;
+      else if (u.type === "supporter") lock = "🔒 ☕ supporters";
       else lock = "🔒";
     }
     cell.innerHTML = `<div class="tc-bg" style="${bg}"></div>` +

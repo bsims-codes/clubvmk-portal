@@ -561,7 +561,7 @@
   "image": "assets/bg/antisora.jpg"
  },
  "flo": {
-  "name": "Flo's V8 Caf\u00e9",
+  "name": "Flo's V8 Café",
   "bg": [
    12,
    10,
@@ -738,5 +738,39 @@
    "cost": 5
   },
   "image": "assets/bg/dug2.jpg"
+ },
+ "wishes": {
+  "name": "Wishes (animated)",
+  "bg": [
+   10,
+   8,
+   30
+  ],
+  "panel": [
+   24,
+   20,
+   52
+  ],
+  "accent": [
+   255,
+   200,
+   120
+  ],
+  "fx": "wishes",
+  "unlock": {
+   "type": "supporter"
+  },
+  "grad": [
+   [
+    10,
+    8,
+    34
+   ],
+   [
+    64,
+    24,
+    92
+   ]
+  ]
  }
 }
