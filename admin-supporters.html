@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CLUBVMK · Supporters</title>
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/styles.css" />
+<style>
+  .aw { max-width: 1180px; margin: 0 auto; padding: 24px 18px 90px; position: relative; z-index: 1; }
+  .ahead { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 4px; flex-wrap: wrap; }
+  .ahead h1 { font-family: "Fraunces", serif; font-size: 32px; margin: 0; }
+  .navlinks a { color: var(--muted); text-decoration: none; margin-left: 14px; font-size: 14px; }
+  .navlinks a:hover { color: var(--gold); }
+  .gate { text-align: center; padding: 80px 20px; }
+  .subtle { color: var(--faint); font-size: 13.5px; margin: 0 0 22px; }
+  .btn { padding: 8px 14px; border-radius: 9px; border: 1px solid var(--line); background: transparent; color: #cdd; font: inherit; font-weight: 600; cursor: pointer; }
+  .btn.gold { background: var(--gold); color: #201800; border: none; }
+  .btn.small { padding: 5px 10px; font-size: 12.5px; }
+  .btn:disabled { opacity: .5; cursor: default; }
+
+  .status { margin-top: 30px; }
+  .status h2 { font-family: "Fraunces", serif; font-size: 18px; margin: 0 0 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--faint); font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 8px; font-size: 11px; font-weight: 600; }
+  .s-done { background: #123a20; color: #84e0a0; }
+  .s-pending { background: #5a3a00; color: #ffcf6a; }
+  .s-error { background: #4a1420; color: #ff9aa8; }
+  .s-unmatched { background: #3a1c4a; color: #d9a0ff; }
+  .s-ignored { background: #23283e; color: #98a0c4; }
+  .muted2 { color: var(--faint); }
+  .ann-box { background: #0e1226; border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+  .ann-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 10px; }
+  .fld { display: flex; flex-direction: column; gap: 4px; }
+  .fld > span { font-size: 11px; color: var(--faint); text-transform: uppercase; letter-spacing: .04em; }
+  .fld > span em { text-transform: none; letter-spacing: 0; font-style: normal; }
+  .grow { flex: 1; min-width: 180px; }
+  .ann-box input, .ann-box select {
+    width: 100%; padding: 8px 11px; border-radius: 9px; border: 1px solid var(--line);
+    background: #0c1020; color: #eef; font: inherit; }
+
+  /* filter chips */
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  .chip { padding: 4px 12px; border-radius: 99px; border: 1px solid var(--line); background: transparent;
+          color: var(--muted); font: inherit; font-size: 13px; cursor: pointer; }
+  .chip:hover { border-color: var(--gold); color: var(--ink); }
+  .chip.on { background: var(--gold); border-color: var(--gold); color: #201800; font-weight: 600; }
+  .chip .n { opacity: .7; font-size: 11.5px; margin-left: 4px; }
+
+  /* donations table bits */
+  .don-wrap { overflow-x: auto; }
+  .don-msg { max-width: 260px; white-space: pre-wrap; word-break: break-word; color: var(--muted); font-size: 12.5px; }
+  .don-who b { display: block; }
+  .don-who span { color: var(--faint); font-size: 12px; }
+  .idcell { display: flex; gap: 6px; align-items: center; }
+  .idcell input { width: 175px; padding: 5px 8px; border-radius: 8px; border: 1px solid var(--line);
+                  background: #0c1020; color: #eef; font: inherit; font-size: 12.5px; }
+  tr.unmatched-row td { background: rgba(217,160,255,.045); }
+  tr.unmatched-row .idcell input { border-color: #7a4b9a; }
+  tr.unmatched-row .btn.requeue { background: var(--gold); color: #201800; border: none; }
+  .amt { font-weight: 600; white-space: nowrap; }
+
+  /* config editor */
+  .cfg-wrap { overflow-x: auto; }
+  .cfg-tbl input[type=number] { width: 76px; padding: 5px 7px; border-radius: 8px; border: 1px solid var(--line);
+    background: #0c1020; color: #eef; font: inherit; font-size: 12.5px; }
+  .cfg-tbl input[type=text] { width: 120px; padding: 5px 7px; border-radius: 8px; border: 1px solid var(--line);
+    background: #0c1020; color: #eef; font: inherit; font-size: 12.5px; }
+  .cfg-tbl input.narrow { width: 56px; }
+  .cfg-tbl td, .cfg-tbl th { padding: 5px 6px; }
+  .cfg-tbl input[type=checkbox] { transform: scale(1.15); cursor: pointer; }
+  .cfg-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+  .subdays { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--muted); }
+  .subdays input { width: 76px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line);
+    background: #0c1020; color: #eef; font: inherit; }
+  h3.cfg-sub { font-family: "Fraunces", serif; font-size: 15px; margin: 16px 0 8px; color: var(--ink); }
+  h3.cfg-sub:first-of-type { margin-top: 0; }
+  .fine { color: var(--faint); font-size: 12.5px; line-height: 1.6; margin-top: 14px; }
+  .fine b { color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="stars" aria-hidden="true"></div>
+<div class="aurora" aria-hidden="true"></div>
+
+<main class="aw">
+  <div id="gate" class="gate">
+    <h1>☕ Supporters</h1>
+    <p class="muted" id="gateMsg">Sign in with Discord to continue.</p>
+    <button id="signInBtn" class="btn gold" style="margin-top:14px">Sign in with Discord</button>
+  </div>
+
+  <div id="panel" style="display:none">
+    <div class="ahead">
+      <h1>☕ Supporters</h1>
+      <div class="navlinks"><a href="admin-home.html">← Admin home</a><a id="signOutBtn" href="#">Sign out</a></div>
+    </div>
+    <p class="subtle">Buy Me a Coffee donations, membership perks, and the reward tiers the bot pays out.</p>
+
+    <section class="status">
+      <h2>💸 Donations</h2>
+      <p class="subtle">Every webhook event, newest first. The bot grants <b>pending</b> rows within a minute.</p>
+      <div class="chips" id="chips">
+        <button class="chip on" data-f="all">All</button>
+        <button class="chip" data-f="pending">Pending</button>
+        <button class="chip" data-f="unmatched">Unmatched</button>
+        <button class="chip" data-f="done">Done</button>
+        <button class="chip" data-f="ignored">Ignored</button>
+        <button class="chip" data-f="error">Error</button>
+        <span style="flex:1"></span>
+        <button class="chip" id="refreshBtn">↻ Refresh</button>
+      </div>
+      <div class="don-wrap">
+        <table id="donTbl"><thead><tr>
+          <th>When</th><th>Type</th><th>Amount</th><th>Supporter</th><th>Message</th>
+          <th>Discord id</th><th>Status</th><th>Note</th>
+        </tr></thead><tbody><tr><td colspan="8" class="muted2">Loading…</td></tr></tbody></table>
+      </div>
+      <p class="fine">
+        <b>pending</b> = queued, the bot grants it within a minute · <b>done</b> = rewards delivered ·
+        <b>unmatched</b> = no Discord id found in the donation message — paste the id and Requeue ·
+        <b>ignored</b> = deliberately skipped · <b>error</b> = the bot hit a problem (see note).
+        Requeue also re-runs a done/errored row if you need to grant it again.
+      </p>
+    </section>
+
+    <section class="status">
+      <h2>🎁 Manual grant</h2>
+      <p class="subtle">Credit a supporter by hand — a cash tip, a comp, or a webhook that never arrived.
+        The bot applies the matching reward tier within a minute.</p>
+      <div class="ann-box">
+        <div class="ann-row">
+          <label class="fld grow"><span>Discord id</span>
+            <input id="mgId" type="text" placeholder="e.g. 886570059974201405" /></label>
+          <label class="fld"><span>Amount (USD)</span>
+            <input id="mgAmt" type="number" min="0.01" step="0.01" placeholder="e.g. 6" style="width:120px" /></label>
+          <label class="fld"><span>Kind</span>
+            <select id="mgKind" style="width:200px">
+              <option value="gift">One-time gift</option>
+              <option value="membership">Membership month</option>
+            </select></label>
+          <button class="btn gold" id="mgGo">Grant</button>
+        </div>
+        <p class="muted2" style="margin:0">Inserted as a pending event — it shows up in the list above and follows the same tiers below.</p>
+      </div>
+    </section>
+
+    <section class="status">
+      <h2>⚙️ Reward tiers</h2>
+      <p class="subtle">What each donation or membership pays out. The bot re-reads this within ~5 minutes;
+        changes only affect future donations.</p>
+      <div class="ann-box">
+        <div id="cfgMissing" style="display:none">
+          <p class="muted2" style="margin:0 0 10px">No config row yet.</p>
+          <button class="btn gold" id="cfgCreate">Create from defaults</button>
+        </div>
+        <div id="cfgEditor" style="display:none">
+          <div class="cfg-head">
+            <label class="subdays">Membership perks last
+              <input id="cfgSubDays" type="number" min="1" step="1" /> days per paid month</label>
+            <button class="btn gold" id="cfgSave">Save config</button>
+          </div>
+
+          <h3 class="cfg-sub">Membership tiers <span class="muted2" style="font-weight:400">(monthly — highest matching “min $/mo” wins)</span></h3>
+          <div class="cfg-wrap">
+            <table class="cfg-tbl" id="subsTbl"><thead><tr>
+              <th>Min $/mo</th><th>Tier</th><th>Badge</th><th>Club 🪙</th><th>Yeti ❄️</th>
+              <th>Legendary 🎁</th><th>Epic+ 🎁</th><th>CD scale</th><th>Daily ×</th>
+              <th>My BG</th><th>Themes</th><th></th>
+            </tr></thead><tbody></tbody></table>
+          </div>
+          <button class="btn small" id="subsAdd" style="margin-top:8px">+ Add membership tier</button>
+
+          <h3 class="cfg-sub" style="margin-top:22px">One-time gift tiers <span class="muted2" style="font-weight:400">(highest matching “min $” wins)</span></h3>
+          <div class="cfg-wrap">
+            <table class="cfg-tbl" id="giftsTbl"><thead><tr>
+              <th>Min $</th><th>Club 🪙</th><th>Yeti ❄️</th>
+              <th>Legendary 🎁</th><th>Epic+ 🎁</th><th>Boost days</th><th>CD scale</th><th>Daily ×</th>
+              <th>My BG</th><th>Themes</th><th></th>
+            </tr></thead><tbody></tbody></table>
+          </div>
+          <button class="btn small" id="giftsAdd" style="margin-top:8px">+ Add gift tier</button>
+
+          <p class="fine">
+            <b>CD scale</b> multiplies cooldowns (0.5 = half-length) · <b>Daily ×</b> multiplies the daily reward ·
+            <b>My BG</b> unlocks custom profile backgrounds · <b>Themes</b> is a comma-separated list of theme keys ·
+            <b>Boost days</b> (gifts) is how long the perks last. Leave a field 0 / blank to leave that perk out of the tier.
+          </p>
+        </div>
+        <p id="cfgLoading" class="muted2" style="margin:0">Loading config…</p>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div id="toast" class="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/admin-supporters.js"></script>
+</body>
+</html>
