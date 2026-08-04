@@ -152,9 +152,22 @@ async function openVault() {
 
 async function sendAnnouncement() {
   const text = $("#annText").value.trim();
-  if (!text) return toast("Write a message first", true);
+  const file = $("#annFile") && $("#annFile").files[0];
+  if (!text && !file) return toast("Write a message or attach a file first", true);
   const guild = $("#annGuild").value || null;
   const payload = { text, embed: $("#annEmbed").checked };
+  if (file) {
+    // Discord's bot upload cap follows the server's boost tier (10 MB
+    // unboosted). The bot re-checks against the real limit before posting.
+    if (file.size > 100 * 1024 * 1024) return toast("File is over 100 MB", true);
+    toast("Uploading " + file.name + "…");
+    const name = Date.now() + "_" + file.name.replace(/[^a-zA-Z0-9._-]+/g, "_");
+    const up = await sb.storage.from("announce-media")
+      .upload(name, file, { contentType: file.type || "application/octet-stream" });
+    if (up.error) return toast("Upload failed: " + up.error.message
+      + " (run schema_announce_media.sql?)", true);
+    payload.media = name;
+  }
   const ch = $("#annChannel").value.trim();
   if (ch) payload.channel_id = ch;
   const title = $("#annTitle").value.trim();
@@ -167,6 +180,7 @@ async function sendAnnouncement() {
   });
   if (error) return toast("Failed: " + error.message, true);
   $("#annText").value = ""; $("#annTitle").value = "";
+  if ($("#annFile")) $("#annFile").value = "";
   toast("Queued — the bot will post it within a few seconds.");
   setTimeout(loadQueue, 2500);
 }
