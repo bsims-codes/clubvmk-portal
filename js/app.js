@@ -260,6 +260,8 @@ async function loadData() {
   S.saved = JSON.stringify(S.draft);
   // unlock state (mirrored from the bot): purchased/granted themes + inventory stats
   S.themesOwned = Array.isArray(prof?.themes_owned) ? prof.themes_owned : [];
+  // supporter perk flag, mirrored from the bot; null/undefined until it syncs = locked
+  S.mybgAllowed = !!prof?.mybg_allowed;
   S.totalItems = S.inv.reduce((n, r) => n + r.count, 0);
   S.byTier = {};
   for (const r of S.inv) { const it = S.catalog[baseItemId(r.item_id)]; if (it) S.byTier[it.r] = (S.byTier[it.r] || 0) + r.count; }
@@ -319,7 +321,7 @@ function wireEditor() {
 }
 
 /* ---------- render everything ---------- */
-function renderAll() { renderThemes(); renderCardStyle(); renderTitles(); renderFeatured(); renderRarityFilter(); renderInv(); renderCombine(); renderPreview(); syncSaveState(); }
+function renderAll() { renderThemes(); renderMyBg(); renderCardStyle(); renderTitles(); renderFeatured(); renderRarityFilter(); renderInv(); renderCombine(); renderPreview(); syncSaveState(); }
 
 /* ============================================================
    Magic combining — a straight port of the bot's plan_combine().
@@ -640,10 +642,162 @@ function renderThemes() {
       if (!unlocked) return toast("🔒 Unlock this theme in Discord first (/theme).");
       S.draft.theme = id;
       if (!S.draft.accent_color) $("#colorInput").value = rgbHex(t.accent);
-      touch(); renderThemes(); renderPreview();
+      touch(); renderThemes(); renderMyBg(); renderPreview();
     };
     g.appendChild(cell);
   }
+  // The player's own uploaded background lives OUTSIDE the themes catalogue as
+  // the pseudo-theme "custom" — the bot grants it via themes_owned when a
+  // custom background is applied. Show it as a normal selectable tile then, so
+  // the grid never breaks while S.draft.theme === "custom".
+  if (S.themesOwned.includes("custom")) {
+    const cell = document.createElement("div");
+    cell.className = "theme-cell" + (S.draft.theme === "custom" ? " on" : "");
+    cell.innerHTML = `<div class="tc-bg" style="background:linear-gradient(160deg,#2a3048,#111420)"></div>
+      <div class="tc-name">🖼️ My Background</div>`;
+    cell.onclick = () => {
+      S.draft.theme = "custom";
+      touch(); renderThemes(); renderMyBg(); renderPreview();
+    };
+    g.appendChild(cell);
+  }
+}
+
+/* ============================================================
+   Custom background — a supporter perk (profiles.mybg_allowed, mirrored from
+   the bot). The portal uploads the image to the `custom-bgs` bucket, then only
+   ASKS via custom_bg_requests; the bot re-checks the perk, processes the image
+   and flips the player's theme to "custom" — same queue-and-poll dance as
+   Remy's kitchen.
+   ============================================================ */
+let mybgBusy = false;
+
+function renderMyBg() {
+  const box = $("#mybgBox"); if (!box) return;
+  const note = $("#mybgNote");
+  // Rebuild only when the panel's shape changes (locked ↔ unlocked, remove
+  // button appearing), so an already-picked file survives unrelated re-renders.
+  const shape = !S.mybgAllowed ? "locked" : "open" + (S.draft.theme === "custom" ? "+rm" : "");
+  if (note) note.textContent = !S.mybgAllowed ? "supporter perk"
+    : S.draft.theme === "custom" ? "in use" : "";
+  if (box.dataset.shape === shape) return;
+  box.dataset.shape = shape;
+
+  if (!S.mybgAllowed) {
+    box.innerHTML = `<p class="hint" style="margin-top:2px">🔒 Custom backgrounds are a
+      supporter perk — see <b>/supporter</b> in Discord.</p>`;
+    return;
+  }
+  const dim = Number.isFinite(S.mybgDim) ? S.mybgDim : 45;
+  box.innerHTML = `
+    <label class="field"><span>Image</span>
+      <input id="mybgFile" type="file" accept="image/*" />
+    </label>
+    <label class="field"><span>Darkness · <b id="mybgDimVal">${dim}%</b></span>
+      <input id="mybgDim" class="mybg-range" type="range" min="0" max="90" value="${dim}" />
+      <span class="hint" style="margin:0">Darkens the image so the card's text stays readable.</span>
+    </label>
+    <div class="mybg-acts">
+      <button id="mybgUpload" class="btn gold">Upload &amp; apply</button>
+      ${S.draft.theme === "custom"
+        ? `<button id="mybgRemove" class="btn ghost">Remove custom background</button>` : ""}
+    </div>
+    <p class="hint">JPEG / PNG / WebP up to 10 MB. Small animated GIFs (&lt;4 MB) stay animated
+      on your card.</p>`;
+  const range = $("#mybgDim");
+  range.oninput = () => { S.mybgDim = Number(range.value); $("#mybgDimVal").textContent = range.value + "%"; };
+  $("#mybgUpload").onclick = uploadMyBg;
+  const rm = $("#mybgRemove");
+  if (rm) rm.onclick = removeMyBg;
+}
+
+// Poll a custom_bg_requests row until the bot answers: ~3s × 15 ≈ 45s.
+async function pollMyBg(id) {
+  for (let i = 0; i < 15; i++) {
+    await new Promise((r) => setTimeout(r, 3000));
+    const { data: row } = await sb.from("custom_bg_requests")
+      .select("status,note").eq("id", id).single();
+    if (row && row.status !== "pending") return row;
+  }
+  return null;   // still pending — the bot is probably down
+}
+
+// After a done request the bot has already written theme/themes_owned back to
+// profiles — adopt them (same convention as buyLayout) and re-render the real
+// card, which now shows the new background.
+async function refreshAfterMyBg() {
+  const { data: prof } = await sb.from("profiles")
+    .select("theme,themes_owned,mybg_allowed").eq("guild_id", S.guild).maybeSingle();
+  if (prof) {
+    S.themesOwned = Array.isArray(prof.themes_owned) ? prof.themes_owned : S.themesOwned;
+    S.mybgAllowed = !!prof.mybg_allowed;
+    if (prof.theme) S.draft.theme = prof.theme;
+    S.saved = JSON.stringify(S.draft);   // the bot already stored it
+  }
+  const box = $("#mybgBox");
+  if (box) delete box.dataset.shape;     // force a rebuild (also clears the file input)
+  renderThemes(); renderMyBg(); syncSaveState();
+  doRender(true);
+}
+
+async function uploadMyBg() {
+  if (mybgBusy) return;
+  const file = $("#mybgFile")?.files?.[0];
+  if (!file) return toast("Pick an image first.", true);
+  if (!/^image\//.test(file.type || "")) return toast("That file isn't an image.", true);
+  if (file.size > 10 * 1024 * 1024) return toast("That image is too big — 10 MB max.", true);
+  // Storage RLS only accepts object names that start with YOUR discord id and
+  // an underscore — keep this exact shape.
+  let ext = (file.name.includes(".") ? file.name.split(".").pop() : "")
+    .toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (!ext || ext.length > 5) ext = ((file.type.split("/")[1] || "png").replace(/[^a-z0-9]/g, "")) || "png";
+  const name = `${S.discordId}_${Date.now()}.${ext}`;
+
+  const btn = $("#mybgUpload");
+  mybgBusy = true; btn.disabled = true; btn.textContent = "Uploading…";
+  const fail = (msg) => {
+    mybgBusy = false; btn.disabled = false; btn.textContent = "Upload & apply";
+    toast(msg, true);
+  };
+  const { error: upErr } = await sb.storage.from("custom-bgs").upload(name, file);
+  if (upErr) return fail("Upload failed: " + upErr.message);
+
+  const dim = (Number.isFinite(S.mybgDim) ? S.mybgDim : 45) / 100;
+  const { data, error } = await sb.from("custom_bg_requests")
+    .insert({ discord_id: String(S.discordId), guild_id: String(S.guild),
+              action: "set", object_name: name, dim })
+    .select("id").single();
+  if (error) return fail(/does not exist|schema cache/i.test(error.message)
+    ? "Custom backgrounds aren't set up in Supabase yet — run the custom_bg schema."
+    : "Couldn't queue that: " + error.message);
+
+  btn.textContent = "Applying…";
+  const row = await pollMyBg(data.id);
+  if (!row) return fail("The bot hasn't answered yet — check back in a moment.");
+  if (row.status === "error") return fail(row.note || "The bot couldn't apply that image.");
+  mybgBusy = false; btn.disabled = false; btn.textContent = "Upload & apply";
+  toast("🖼️ Background applied! Rendering your card…");
+  await refreshAfterMyBg();
+}
+
+async function removeMyBg() {
+  if (mybgBusy) return;
+  const btn = $("#mybgRemove");
+  mybgBusy = true; btn.disabled = true; btn.textContent = "Removing…";
+  const fail = (msg) => {
+    mybgBusy = false; btn.disabled = false; btn.textContent = "Remove custom background";
+    toast(msg, true);
+  };
+  const { data, error } = await sb.from("custom_bg_requests")
+    .insert({ discord_id: String(S.discordId), guild_id: String(S.guild), action: "remove" })
+    .select("id").single();
+  if (error) return fail("Couldn't queue that: " + error.message);
+  const row = await pollMyBg(data.id);
+  if (!row) return fail("The bot hasn't answered yet — check back in a moment.");
+  if (row.status === "error") return fail(row.note || "The bot couldn't remove it.");
+  mybgBusy = false;
+  toast("Background removed.");
+  await refreshAfterMyBg();
 }
 
 function renderFeatured() {
