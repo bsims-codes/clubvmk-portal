@@ -141,11 +141,14 @@ async function openVault() {
   if (ch) payload.channel_id = ch;
   const ping = $("#lrPing").value.trim();
   if (ping) payload.ping_role = ping;
+  const note = $("#lrNote") && $("#lrNote").value.trim();
+  if (note) payload.note = note;
   const { error } = await sb.from("admin_actions").insert({
     action: "legendary_rush", discord_id: String(A.me),
     guild_id: $("#lrGuild").value || null, payload, created_by: String(A.me),
   });
   if (error) return toast("Failed: " + error.message, true);
+  if ($("#lrNote")) $("#lrNote").value = "";
   toast(`Queued — the ${rarity} vault opens for ${mins} min within a few seconds.`);
   setTimeout(loadQueue, 2500);
 }
