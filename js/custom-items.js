@@ -33,11 +33,22 @@
     }
   };
 
-  /* Fold them into a {id -> entry} catalogue. Call this AFTER applying the
-     curator's rarity overrides: custom items aren't in that table, so the
-     usual "not listed means common" rule would flatten every one of them. */
+  /* Fold them into a {id -> entry} catalogue. Call this AFTER the page's own
+     override pass: the pages' "not listed means common" rule would flatten
+     customs, so this does its own override lookup instead — a curated tier
+     in the overrides table re-tiers a custom item exactly like everything
+     else (the bot applies the same rule). */
   window.mergeCustomItems = async function (sb, catalog) {
     const items = await window.loadCustomItems(sb);
+    if (items.length) {
+      try {
+        const { data } = await sb.from("overrides").select("item_id,tier")
+          .like("item_id", "custom:%");
+        const map = {};
+        for (const row of data || []) map[row.item_id] = row.tier;
+        for (const it of items) if (map[it.id]) it.r = map[it.id];
+      } catch (e) { /* overrides unreachable — keep uploaded rarities */ }
+    }
     for (const it of items) catalog[it.id] = it;
     return items.length;
   };

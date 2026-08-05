@@ -121,8 +121,8 @@ async function boot() {
   S.titles = ttl;
   S.pets = pets;      // key -> {name, img} for the card-pet picker
   await applyRarityOverrides();
-  // after the overrides: custom items aren't in that table, and its
-  // "not listed means common" rule would flatten every one of them
+  // after the overrides: mergeCustomItems does its own override lookup, so a
+  // curated tier re-tiers a custom item exactly like everything else
   await window.mergeCustomItems(sb, S.catalog);
 
   $("#signInBtn").onclick = signIn;
