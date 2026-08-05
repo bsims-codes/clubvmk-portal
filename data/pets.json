@@ -38,5 +38,273 @@
  "spot": {
   "name": "Spot",
   "img": "items/83094_0.png"
+ },
+ "75204": {
+  "name": "Baby Baymax",
+  "img": "items/75204_0.png"
+ },
+ "74752": {
+  "name": "Baby Octopus",
+  "img": "items/74752_0.png"
+ },
+ "82658": {
+  "name": "Baby TickTock",
+  "img": "items/82658_0.png"
+ },
+ "47501": {
+  "name": "Bambi",
+  "img": "items/47501_0.png"
+ },
+ "75275": {
+  "name": "Binx",
+  "img": "items/75275_0.png"
+ },
+ "83604": {
+  "name": "Birby Black",
+  "img": "items/83604_0.png"
+ },
+ "83603": {
+  "name": "Birby MOO Edition",
+  "img": "items/83603_0.png"
+ },
+ "83602": {
+  "name": "Birby Pink",
+  "img": "items/83602_0.png"
+ },
+ "83605": {
+  "name": "Birby Purple",
+  "img": "items/83605_0.png"
+ },
+ "83606": {
+  "name": "Birby Red",
+  "img": "items/83606_0.png"
+ },
+ "82645": {
+  "name": "Blue Tang Clan",
+  "img": "items/82645_0.png"
+ },
+ "82088": {
+  "name": "Bunny Brownie",
+  "img": "items/82088_0.png"
+ },
+ "82089": {
+  "name": "Bunny Oreo",
+  "img": "items/82089_0.png"
+ },
+ "47698": {
+  "name": "Butterfly Blue",
+  "img": "items/47698_0.png"
+ },
+ "47695": {
+  "name": "Butterfly Gold",
+  "img": "items/47695_0.png"
+ },
+ "47699": {
+  "name": "Butterfly Green",
+  "img": "items/47699_0.png"
+ },
+ "47697": {
+  "name": "Butterfly Orange",
+  "img": "items/47697_0.png"
+ },
+ "47701": {
+  "name": "Butterfly Pink",
+  "img": "items/47701_0.png"
+ },
+ "47700": {
+  "name": "Butterfly Purple",
+  "img": "items/47700_0.png"
+ },
+ "47696": {
+  "name": "Butterfly Red",
+  "img": "items/47696_0.png"
+ },
+ "47670": {
+  "name": "Dalmatian",
+  "img": "items/47670_0.png"
+ },
+ "82166": {
+  "name": "Dragon Asher",
+  "img": "items/82166_0.png"
+ },
+ "82170": {
+  "name": "Dragon Cinder",
+  "img": "items/82170_0.png"
+ },
+ "82165": {
+  "name": "Dragon Cyrus",
+  "img": "items/82165_0.png"
+ },
+ "82167": {
+  "name": "Dragon Jada",
+  "img": "items/82167_0.png"
+ },
+ "82176": {
+  "name": "Dragon Kay",
+  "img": "items/82176_0.png"
+ },
+ "82172": {
+  "name": "Dragon Lillia",
+  "img": "items/82172_0.png"
+ },
+ "82168": {
+  "name": "Dragon Mazi",
+  "img": "items/82168_0.png"
+ },
+ "82174": {
+  "name": "Dragon Ripto",
+  "img": "items/82174_0.png"
+ },
+ "82169": {
+  "name": "Dragon Titan",
+  "img": "items/82169_0.png"
+ },
+ "82171": {
+  "name": "Dragon Xayah",
+  "img": "items/82171_0.png"
+ },
+ "83588": {
+  "name": "Drone",
+  "img": "items/83588_0.png"
+ },
+ "82479": {
+  "name": "Flower",
+  "img": "items/82479_0.png"
+ },
+ "82992": {
+  "name": "Fox",
+  "img": "items/82992_0.png"
+ },
+ "83587": {
+  "name": "H.E.R.B.I.E. Mini",
+  "img": "items/83587_0.png"
+ },
+ "82646": {
+  "name": "Insane Clownfish Posse",
+  "img": "items/82646_0.png"
+ },
+ "82708": {
+  "name": "Mike Wazowski",
+  "img": "items/82708_0.png"
+ },
+ "75319": {
+  "name": "Oogie Boogie",
+  "img": "items/75319_0.png"
+ },
+ "59540": {
+  "name": "Penguin",
+  "img": "items/59540_0.png"
+ },
+ "59541": {
+  "name": "Polar Bear",
+  "img": "items/59541_0.png"
+ },
+ "83595": {
+  "name": "Puffle Black",
+  "img": "items/83595_0.png"
+ },
+ "83577": {
+  "name": "Puffle Blue",
+  "img": "items/83577_0.png"
+ },
+ "83581": {
+  "name": "Puffle Brown",
+  "img": "items/83581_0.png"
+ },
+ "83578": {
+  "name": "Puffle Green",
+  "img": "items/83578_0.png"
+ },
+ "83586": {
+  "name": "Puffle Olaf",
+  "img": "items/83586_0.png"
+ },
+ "83580": {
+  "name": "Puffle Orange",
+  "img": "items/83580_0.png"
+ },
+ "83579": {
+  "name": "Puffle Pink",
+  "img": "items/83579_0.png"
+ },
+ "83583": {
+  "name": "Puffle Purple",
+  "img": "items/83583_0.png"
+ },
+ "83582": {
+  "name": "Puffle Red",
+  "img": "items/83582_0.png"
+ },
+ "83584": {
+  "name": "Pufflecorn",
+  "img": "items/83584_0.png"
+ },
+ "82850": {
+  "name": "Puppy Lady",
+  "img": "items/82850_0.png"
+ },
+ "83418": {
+  "name": "Snow Leopard",
+  "img": "items/83418_0.png"
+ },
+ "82007": {
+  "name": "Snowgies",
+  "img": "items/82007_0.png"
+ },
+ "82778": {
+  "name": "Sparky",
+  "img": "items/82778_0.png"
+ },
+ "83512": {
+  "name": "Trans Blahaj",
+  "img": "items/83512_0.png"
+ },
+ "82869": {
+  "name": "Wish Star",
+  "img": "items/82869_0.png"
+ },
+ "4105": {
+  "name": "Dragon Pin",
+  "img": "items/4105_0.png"
+ },
+ "82164": {
+  "name": "Fairy Clarion",
+  "img": "items/82164_0.png"
+ },
+ "82158": {
+  "name": "Fairy Fawn",
+  "img": "items/82158_0.png"
+ },
+ "82159": {
+  "name": "Fairy Iridessa",
+  "img": "items/82159_0.png"
+ },
+ "82160": {
+  "name": "Fairy Silvermist",
+  "img": "items/82160_0.png"
+ },
+ "82161": {
+  "name": "Fairy Terence",
+  "img": "items/82161_0.png"
+ },
+ "82162": {
+  "name": "Fairy Tink",
+  "img": "items/82162_0.png"
+ },
+ "82163": {
+  "name": "Fairy Vidia",
+  "img": "items/82163_0.png"
+ },
+ "83813": {
+  "name": "Puffle Demon",
+  "img": "items/83813_0.png"
+ },
+ "83812": {
+  "name": "Puffle Zombie",
+  "img": "items/83812_0.png"
+ },
+ "82322": {
+  "name": "Rajah",
+  "img": "items/82322_0.png"
  }
 }
