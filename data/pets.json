@@ -34,5 +34,9 @@
  "albert": {
   "name": "Albert",
   "img": "items/75321_0.png"
+ },
+ "spot": {
+  "name": "Spot",
+  "img": "items/83094_0.png"
  }
 }
