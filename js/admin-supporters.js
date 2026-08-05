@@ -213,7 +213,9 @@ function numCell(key, val, opts = {}) {
 
 function tierRowHTML(t, isSub) {
   const crates = t.crates || {};
-  let h = `<tr>`;
+  // Stash the whole original tier on the row: keys this editor has no inputs
+  // for (frames, pets, gift badges, future additions) survive a Save intact.
+  let h = `<tr data-orig="${esc(JSON.stringify(t))}">`;
   h += numCell("min", t.min, { step: 0.01 });
   if (isSub) {
     h += numCell("tier", t.tier, { narrow: true });
@@ -252,7 +254,15 @@ function addTierRow(isSub) {
 function readTierRow(tr, isSub) {
   const get = (k) => tr.querySelector(`[data-k="${k}"]`);
   const num = (k) => { const v = parseFloat(get(k)?.value); return Number.isFinite(v) ? v : 0; };
-  const t = { min: num("min") };
+  // Start from the stashed original so keys without editor inputs are kept,
+  // then clear every managed key and re-set it from the DOM below.
+  let orig = {};
+  try { orig = JSON.parse(tr.dataset.orig || "{}"); } catch (e) {}
+  const t = { ...orig };
+  for (const k of ["min", "tier", "club", "yeti", "crates", "boost_days",
+                   "cd_scale", "daily_mult", "mybg", "themes"]) delete t[k];
+  if (isSub) delete t.badge;   // gift badges have no input; keep the stashed one
+  t.min = num("min");
   if (isSub) {
     const tier = num("tier"); if (tier > 0) t.tier = tier;
     const badge = get("badge").value.trim(); if (badge) t.badge = badge;
