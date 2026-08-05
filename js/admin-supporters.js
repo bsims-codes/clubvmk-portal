@@ -157,19 +157,25 @@ async function manualGrant() {
 /* ============================================================
    C. Reward config editor
    ============================================================ */
+/* Mirrors config.SUPPORTER_DEFAULTS in the bot. "Create defaults" upserts this
+   straight over the live row, so it has to stay cosmetic-only: no crates, no
+   cd_scale, no daily_mult. The pre-agreement version of this block handed out
+   legendary crates, halved cooldowns and doubled /daily, which one click would
+   have put back. Keep it in step with the bot whenever tiers change. */
 const DEFAULT_CONFIG = {
   sub_days: 33,
   subs: [
-    { min: 10, tier: 2, badge: "VIP", club: 50, yeti: 25, crates: { legendary: 5 },
-      cd_scale: 0.5, daily_mult: 2.0, mybg: true, themes: ["wishes"] },
-    { min: 5, tier: 1, badge: "SUPPORTER", club: 30, yeti: 15, crates: { legendary: 1 } },
+    { min: 5, tier: 1, badge: "VIP", club: 10, yeti: 2, mybg: true,
+      themes: ["wishes"], frames: ["gold", "sparkle", "aurora"], pets: true },
   ],
   gifts: [
-    { min: 25, club: 40, yeti: 25, crates: { legendary: 6 }, boost_days: 90,
-      cd_scale: 0.67, daily_mult: 1.5, mybg: true },
-    { min: 16, club: 30, yeti: 20, crates: { legendary: 4 } },
-    { min: 6, club: 25, yeti: 10, crates: { epicplus: 2 }, themes: ["wishes"] },
-    { min: 0.01, club: 15, yeti: 5, crates: { epicplus: 1 } },
+    { min: 25, club: 10, yeti: 2, badge: "PATRON", mybg: true, themes: ["wishes"],
+      frames: ["gold", "sparkle", "aurora"], pets: true },
+    { min: 15, club: 8, yeti: 2, badge: "SUPPORTER", mybg: true,
+      themes: ["wishes"], frames: ["gold", "sparkle"] },
+    { min: 5, club: 5, yeti: 2, badge: "SUPPORTER", themes: ["wishes"],
+      frames: ["gold"] },
+    { min: 0.01, club: 5, yeti: 2, badge: "SUPPORTER" },
   ],
 };
 
