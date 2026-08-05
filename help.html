@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CLUBVMK · How to Play</title>
+<meta name="description" content="The one-page guide to the CLUBVMK Collector bot — how drops work, every command, currencies, crates, and profile customization." />
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/styles.css" />
+<style>
+  .guide { max-width: 1060px; margin: 0 auto; padding: 24px 20px 80px; }
+  .guide h1 { font-family: Fraunces, serif; font-size: clamp(30px, 5vw, 44px); margin: 10px 0 6px; }
+  .guide h1 em { color: #f0c860; font-style: normal; }
+  .guide .lede { color: #aab3d0; max-width: 640px; margin: 0 0 26px; }
+  .gsec { background: rgba(16,19,38,.72); border: 1px solid rgba(120,130,180,.18);
+          border-radius: 16px; padding: 20px 22px; margin: 18px 0; }
+  .gsec h2 { font-family: Fraunces, serif; font-size: 22px; margin: 0 0 12px; color: #eef0fa; }
+  .gsec h2 .n { display: inline-grid; place-items: center; width: 28px; height: 28px; margin-right: 8px;
+                border-radius: 50%; background: #f0c860; color: #1a1405; font: 700 15px Outfit, sans-serif; }
+  .gsec p, .gsec li { color: #c6cde6; font-size: 15px; line-height: 1.55; }
+  .gsec code, .cmd { background: rgba(240,200,96,.12); border: 1px solid rgba(240,200,96,.25);
+         color: #f0d79a; border-radius: 6px; padding: 1px 7px; font: 600 13.5px/1.6 Consolas, monospace; white-space: nowrap; }
+  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+  .step { background: rgba(10,12,26,.6); border: 1px solid rgba(120,130,180,.15); border-radius: 12px; padding: 14px 16px; }
+  .step b { color: #eef0fa; }
+  /* discord-style mock */
+  .disc { background: #313338; border-radius: 10px; padding: 14px 16px; margin: 14px 0 4px;
+          font: 400 14.5px/1.45 Outfit, sans-serif; color: #dbdee1; box-shadow: 0 6px 24px rgba(0,0,0,.35); }
+  .disc .msg { display: flex; gap: 10px; margin: 6px 0; }
+  .disc .av { width: 36px; height: 36px; border-radius: 50%; flex: none; display: grid; place-items: center; font-size: 19px; }
+  .disc .bot-av { background: #274c87; } .disc .p1 { background: #7a4ca3; } .disc .p2 { background: #3d7a4c; }
+  .disc .who { font-weight: 600; color: #f2f3f5; } .disc .tag { background: #5865f2; color: #fff; font-size: 10px;
+          border-radius: 4px; padding: 1px 4px; vertical-align: 2px; margin-left: 4px; }
+  .disc .embed { border-left: 4px solid #F0A13C; background: #2b2d31; border-radius: 4px; padding: 10px 12px; margin-top: 4px; max-width: 430px; }
+  .disc .embed b { color: #f2f3f5; }
+  .disc .dim { color: #949ba4; font-size: 12.5px; }
+  /* rarity chips */
+  .rar { display: flex; flex-wrap: wrap; gap: 10px; margin: 8px 0 2px; }
+  .rar span { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px;
+              background: rgba(10,12,26,.6); border: 1px solid rgba(120,130,180,.2); font: 600 14px Outfit; color: #e6e9f7; }
+  .rar i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+  /* command cards */
+  .cmds { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 10px; margin-top: 6px; }
+  .cmdc { background: rgba(10,12,26,.55); border: 1px solid rgba(120,130,180,.14); border-radius: 10px;
+          padding: 10px 13px; font-size: 14px; color: #c6cde6; line-height: 1.45; }
+  .cmdc .cd { float: right; color: #8a93b8; font-size: 12px; margin-left: 8px; margin-top: 2px; }
+  .twocol { display: grid; grid-template-columns: 1.1fr .9fr; gap: 22px; align-items: start; }
+  .twocol img { width: 100%; border-radius: 12px; border: 1px solid rgba(120,130,180,.25); }
+  @media (max-width: 760px) { .twocol { grid-template-columns: 1fr; } }
+  .tip { border-left: 3px solid #f0c860; background: rgba(240,200,96,.07); padding: 8px 14px; border-radius: 0 8px 8px 0; margin-top: 12px; }
+  .guide a { color: #8fc1ff; }
+</style>
+</head>
+<body>
+<div class="stars" aria-hidden="true"></div>
+<div class="aurora" aria-hidden="true"></div>
+
+<header class="topbar">
+  <a class="brand" href="./">
+    <span class="brand-mark">✦</span>
+    <span class="brand-word">CLUB<em>VMK</em></span>
+    <span class="brand-sub">How to Play</span>
+  </a>
+  <div class="top-right">
+    <a class="btn ghost tiny" href="./">🎨 <span>Profile editor</span></a>
+  </div>
+</header>
+
+<main class="guide">
+  <h1>How to play the <em>Collector</em></h1>
+  <p class="lede">Real MyVMK items drop into the collect channel around the clock.
+  Be quick, build a collection, customize your card, and cause a little character chaos along the way.</p>
+
+  <!-- 1. the core loop -->
+  <section class="gsec">
+    <h2><span class="n">1</span>The core loop: grab the drop</h2>
+    <div class="steps">
+      <div class="step">📦 <b>Items drop</b> in the collect channel every few minutes — rarer ones get a flashy announcement.</div>
+      <div class="step">⚡ <b>Type <code>collect</code></b> in chat. The first <b>3 players within 5 seconds</b> each keep a copy (the 2nd and 3rd get roasted).</div>
+      <div class="step">🏴‍☠️ <b>Or type <code>blackbeard</code></b> during that 5s window to <b>steal</b> the drop from a random collector. <span class="dim">(10&nbsp;min cooldown — and their doodle may fight back with <span class="cmd">/petshop</span>.)</span></div>
+    </div>
+    <div class="disc">
+      <div class="msg"><div class="av bot-av">🤖</div><div>
+        <span class="who">ClubVMK Collector</span><span class="tag">APP</span>
+        <div class="embed"><b>🟠 A LEGENDARY item appeared!</b><br>
+        <b>Inferno Dragon Pin</b> — first to type <code>collect</code> keeps it!</div>
+      </div></div>
+      <div class="msg"><div class="av p1">🦄</div><div><span class="who">PixiePirate</span><div>collect</div></div></div>
+      <div class="msg"><div class="av p2">🐢</div><div><span class="who">TurtleTalk22</span><div>collect</div></div></div>
+      <div class="msg"><div class="av bot-av">🤖</div><div>
+        <span class="who">ClubVMK Collector</span><span class="tag">APP</span>
+        <div>🎉 <b>PixiePirate</b> grabbed <b>Inferno Dragon Pin</b>! <span class="dim">(TurtleTalk22 snagged a copy… barely.)</span></div>
+      </div></div>
+    </div>
+    <p><b>Watch for wandering friends:</b> 🤖 <b>EVE</b> appears randomly — first to type <code>protect</code>
+    is shielded from raids, freezes &amp; sabotage for an hour. 🧚 <b>Tinkerbell</b> flutters by — first to
+    say <code>tinkerbell</code> gets <b>+1 copy</b> on their next collected drop.</p>
+  </section>
+
+  <!-- 2. rarities -->
+  <section class="gsec">
+    <h2><span class="n">2</span>Rarities</h2>
+    <div class="rar">
+      <span><i style="background:#8A93B8"></i>Common</span>
+      <span><i style="background:#4CAF7D"></i>Uncommon</span>
+      <span><i style="background:#3D8BFD"></i>Rare</span>
+      <span><i style="background:#A45CF0"></i>Epic</span>
+      <span><i style="background:#F0A13C"></i>Legendary</span>
+    </div>
+    <p>Every item in the 13,000-item MyVMK catalog has a curated rarity. Collect enough of one tier and you
+    earn <b>titles</b> for your card — 10 Legendaries makes you a <b>Beginner Legend</b>. Check
+    <span class="cmd">/item</span> to look anything up, and <span class="cmd">/leaderboard</span> to see who's ahead.</p>
+  </section>
+
+  <!-- 3. currencies -->
+  <section class="gsec">
+    <h2><span class="n">3</span>Two currencies</h2>
+    <div class="steps">
+      <div class="step">🪙 <b>Club Coins</b> — a 1-in-10 chance every time you collect, plus <span class="cmd">/daily</span> check-ins.
+        Spend them in the shops below.</div>
+      <div class="step">❄️ <b>Yeti Credits</b> — also drop while collecting. Spend one on <span class="cmd">/yeti</span> to make it
+        <b>rain 3 items</b> for the whole channel (you pick yours first!). Coins can cover most purchases when credits run dry —
+        Club Coins spend first, Yeti tops up.</div>
+    </div>
+    <p>📅 <span class="cmd">/daily</span> pays <b>5 🪙</b> and grows with your streak: +1/day every 5 days
+    (days 1–5 pay 5, days 6–10 pay 6…). Resets at midnight Eastern — <b>miss a day and the streak starts over.</b></p>
+  </section>
+
+  <!-- 4. spending -->
+  <section class="gsec">
+    <h2><span class="n">4</span>Shops, cooking &amp; crafting</h2>
+    <div class="cmds">
+      <div class="cmdc"><span class="cmd">/shop</span> — the Coin Shop: crates from 1 🪙 (common) to 15 🪙 (legendary), each a guaranteed item of that rarity.</div>
+      <div class="cmdc"><span class="cmd">/ned</span> — Ned's Daily Shop: one item per rarity, restocked daily, priced 2/4/8/12/20.</div>
+      <div class="cmdc"><span class="cmd">/remy</span> — <i>Anyone Can Cook</i>: throw any 3 items in the pot for a random one back — usually uncommon, sometimes far better. Rarer ingredients improve the odds. No cooldown!</div>
+      <div class="cmdc"><span class="cmd">/combine</span> — fuse duplicate Magic pins into one starred Magic (up to ★5).</div>
+      <div class="cmdc"><span class="cmd">/crates</span> — open Legendary Crates earned by supporting the bot (see the bottom of this page).</div>
+    </div>
+  </section>
+
+  <!-- 5. profile -->
+  <section class="gsec">
+    <h2><span class="n">5</span>Your collector card</h2>
+    <div class="twocol">
+      <div>
+        <p>Your profile is a rendered card: stats, rarity counts, earned titles, and a showcase of up to
+        <b>8 featured items</b> (15 with the Gallery layout). <b>Featured items can't be stolen or lost!</b></p>
+        <div class="cmds" style="grid-template-columns:1fr">
+          <div class="cmdc"><span class="cmd">/profile</span> — view your card (or anyone's). <span class="cmd">/inventory</span> &amp; <span class="cmd">/recent</span> list your items.</div>
+          <div class="cmdc"><span class="cmd">/feature</span> / <span class="cmd">/unfeature</span> — pick your showcase.</div>
+          <div class="cmdc"><span class="cmd">/theme</span> — 30+ card themes, from free to animated. <span class="cmd">/setbio</span> and <span class="cmd">/setcolor</span> finish the look.</div>
+        </div>
+        <p class="tip">💻 Prefer clicking to typing? The <a href="./">web portal</a> does all of this with a live
+        preview — sign in with Discord, browse your full inventory, and design your card there.</p>
+      </div>
+      <div><img src="assets/card-example.gif" alt="Example collector card with the animated Wishes theme" loading="lazy"></div>
+    </div>
+  </section>
+
+  <!-- 6. character commands -->
+  <section class="gsec">
+    <h2><span class="n">6</span>Character chaos <span style="font-weight:400;font-size:14px;color:#8a93b8">(each with its own cooldown — check <span class="cmd">/cooldown</span>)</span></h2>
+    <p style="margin-top:0"><b>Luck &amp; loot:</b></p>
+    <div class="cmds">
+      <div class="cmdc"><span class="cd">4h</span><span class="cmd">/walle</span> — a mystery find only you can open: trash, common, or rare.</div>
+      <div class="cmdc"><span class="cd">2h</span><span class="cmd">/hades</span> — a 5-second deal: rare+ item… or your next collect is claimed.</div>
+      <div class="cmdc"><span class="cd">4h</span><span class="cmd">/maleficent</span> — battle the dragon: 30% to win, and 70% of wins are rare+.</div>
+      <div class="cmdc"><span class="cd">6h</span><span class="cmd">/gator</span> — the Gator Waiter serves a random player an item.</div>
+      <div class="cmdc"><span class="cd">3h</span><span class="cmd">/russell</span> — Wilderness Explorer quest: 6 items in an hour → 3 🪙 + 3 ❄️.</div>
+      <div class="cmdc"><span class="cd">6h</span><span class="cmd">/ursula</span> — a 5-spawn deal: boosted odds &amp; freeze-immunity, but missed drops cost items. Finish it for a wish.</div>
+      <div class="cmdc"><span class="cd">3h</span><span class="cmd">/presto</span> — trades one random item of yours for another of the same rarity.</div>
+    </div>
+    <p><b>Mischief &amp; duels:</b></p>
+    <div class="cmds">
+      <div class="cmdc"><span class="cd">1h</span><span class="cmd">/elsa</span> — freeze a player for 15 min so they can't collect (anonymous!). <span class="cmd">/frozen</span> checks the thaw.</div>
+      <div class="cmdc"><span class="cd">4h</span><span class="cmd">/yzma</span> — "WRONG LEVERRR!" Their next collected item turns to ash (anonymous).</div>
+      <div class="cmdc"><span class="cd">4h</span><span class="cmd">/stitch</span> — sabotage the next drop: timing, rarity, or it relocates somewhere in the server.</div>
+      <div class="cmdc"><span class="cd">6h</span><span class="cmd">/scar</span> — 50/50 duel: winner takes half the loser's Yeti Credits.</div>
+      <div class="cmdc"><span class="cd">1h</span><span class="cmd">/rps</span> — Rock Paper Scissors for one of the loser's items.</div>
+      <div class="cmdc"><span class="cd">10m</span><span class="cmd">/petshop</span> — just plundered? Call your doodle to maul the pirate and take it back.</div>
+    </div>
+    <p><b>Bending the spawns:</b></p>
+    <div class="cmds">
+      <div class="cmdc"><span class="cd">1h</span><span class="cmd">/flort</span> — delay the next drop ~2.5 min to make it guaranteed epic+ (you can't grab that one).</div>
+      <div class="cmdc"><span class="cd">30m</span><span class="cmd">/esmeralda</span> — surrender an item to see the next 5 drops.</div>
+      <div class="cmdc"><span class="cd">4h</span><span class="cmd">/dash</span> — server-wide super-speed: drops come twice as fast for 30 min.</div>
+      <div class="cmdc"><span class="cd">4h</span><span class="cmd">/genie</span> — a 75-second spawn frenzy: back-to-back drops as fast as you can grab.</div>
+      <div class="cmdc"><span class="cd">2h</span><span class="cmd">/edna</span> — dahling, the next 4 drops are all the same item.</div>
+      <div class="cmdc"><span class="cd">90m</span><span class="cmd">/vanellope</span> — glitch! Skip the next drop entirely.</div>
+      <div class="cmdc"><span class="cd">90m</span><span class="cmd">/slinkydog</span> — spring back! The next drop repeats the previous item.</div>
+      <div class="cmdc"><span class="cd">8h</span><span class="cmd">/cinderella</span> — pay 1 🪙 to reserve a guaranteed grab on the next drop, pirate-proof and freeze-proof.</div>
+      <div class="cmdc"><span class="cd">3h</span><span class="cmd">/baymax</span> — heal yourself: clears a freeze, a curse, or a Hades debt.</div>
+    </div>
+    <p class="tip">⚡ <b>Skip the wait:</b> catch a command on cooldown and the reply offers a coin-priced
+    skip button — it buys one extra use while the original cooldown keeps ticking.</p>
+  </section>
+
+  <!-- 7. trading -->
+  <section class="gsec">
+    <h2><span class="n">7</span>Trading &amp; giving</h2>
+    <div class="cmds">
+      <div class="cmdc"><span class="cmd">/trade</span> — offer a swap (accept/decline), or hit 🔄 on anyone's inventory or profile.</div>
+      <div class="cmdc"><span class="cmd">/market</span> — browse what everyone owns to find trade partners.</div>
+      <div class="cmdc"><span class="cmd">/gift</span> — hand an item straight to a friend, no race.</div>
+      <div class="cmdc"><span class="cmd">/giveaway</span> — toss an item to the channel: first to type <code>collect</code> keeps it (no pirates allowed).</div>
+    </div>
+  </section>
+
+  <!-- 8. supporter -->
+  <section class="gsec">
+    <h2><span class="n">8</span>Support the club ☕</h2>
+    <p>The bot runs 24/7 on a real server. Optional <b>supporter perks</b> say thank-you for helping keep it
+    alive — Legendary Crates, coins, an exclusive animated theme, and custom card backgrounds.
+    Run <span class="cmd">/supporter</span> in Discord for the tiers and your personal donation code,
+    and open what you've earned with <span class="cmd">/crates</span>. Collecting is and stays 100% free.</p>
+  </section>
+
+  <p style="text-align:center;color:#8a93b8;font-size:13px;margin-top:30px">
+    ✦ CLUBVMK Collector — <a href="./">the Collector's Vault portal</a> · type <span class="cmd">/help</span> in Discord anytime
+  </p>
+</main>
+</body>
+</html>
