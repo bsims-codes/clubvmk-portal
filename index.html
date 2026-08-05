@@ -101,6 +101,21 @@
         <div class="panel-body"><div id="mybgBox"></div></div>
       </details>
 
+      <!-- Avatar frame & card pet — supporter perks. Locked/unlocked bodies are
+           drawn by renderFramePet(); the whole panel stays hidden until the
+           profiles frame/pet columns exist in Supabase. -->
+      <details class="panel" id="framePetPanel" style="display:none">
+        <summary class="panel-head"><h2>✨ Frame &amp; pet</h2><span id="framePetNote" class="muted"></span></summary>
+        <div class="panel-body">
+          <h3 class="sub">Avatar frame</h3>
+          <div id="frameRow" class="frame-row"></div>
+          <h3 class="sub">Card pet</h3>
+          <div id="petBox"></div>
+          <p class="hint">The frame rings your avatar and the pet perches on your card —
+            both show up in the exact-card preview as you pick.</p>
+        </div>
+      </details>
+
       <details class="panel" id="cardPanel" style="display:none">
         <summary class="panel-head"><h2>Card style</h2><span id="cardNote" class="muted"></span></summary>
         <div class="panel-body">

@@ -107,17 +107,19 @@ async function loadThemes() {
 
 /* ---------- boot ---------- */
 async function boot() {
-  const [cat, thm, ttl] = await Promise.all([
+  const [cat, thm, ttl, pets] = await Promise.all([
     // no-cache = revalidate with the server (cheap, ETag). Without it a browser
     // holding an older catalogue silently hides any newly-added item — combined
     // Magics vanished from inventories this way.
     fetch("data/catalog.min.json", { cache: "no-cache" }).then((r) => r.json()),
     loadThemes(),
     fetch("data/titles.json").then((r) => r.json()).catch(() => ({ levels: {}, totals: [] })),
+    fetch("data/pets.json").then((r) => r.json()).catch(() => ({})),
   ]);
   for (const it of cat) S.catalog[it.id] = it;
   S.themes = thm;
   S.titles = ttl;
+  S.pets = pets;      // key -> {name, img} for the card-pet picker
   await applyRarityOverrides();
   // after the overrides: custom items aren't in that table, and its
   // "not listed means common" rule would flatten every one of them
@@ -242,6 +244,11 @@ async function loadData() {
   catch (e) { S.hasHidden = false; }
   try { const { error } = await sb.from("profiles").select("card_layout").limit(1); S.hasCard = !error; }
   catch (e) { S.hasCard = false; }
+  // frame/pet columns gate the whole "Frame & pet" panel (SQL may not have run yet)
+  try {
+    const { error } = await sb.from("profiles").select("frame,pet,frames_owned,pets_allowed").limit(1);
+    S.hasFramePet = !error;
+  } catch (e) { S.hasFramePet = false; }
   S.layoutsOwned = Array.isArray(prof?.layouts_owned) ? prof.layouts_owned : [];
   S.draft = {
     theme: prof?.theme || CFG.DEFAULT_THEME,
@@ -254,6 +261,10 @@ async function loadData() {
     featured: [],
     bio: prof?.bio || "",
     hidden_titles: Array.isArray(prof?.hidden_titles) ? prof.hidden_titles.slice() : [],
+    // kept verbatim (not clamped to the catalogues) so a key this build doesn't
+    // know yet survives a round-trip instead of being silently wiped on save
+    frame: prof?.frame || null,
+    pet: prof?.pet || null,
   };
   // clamped after the draft exists, since the cap depends on the chosen layout
   S.draft.featured = clampFeatured(prof?.featured);
@@ -262,6 +273,9 @@ async function loadData() {
   S.themesOwned = Array.isArray(prof?.themes_owned) ? prof.themes_owned : [];
   // supporter perk flag, mirrored from the bot; null/undefined until it syncs = locked
   S.mybgAllowed = !!prof?.mybg_allowed;
+  // frame/pet unlock state, mirrored from the bot the same way
+  S.framesOwned = Array.isArray(prof?.frames_owned) ? prof.frames_owned : [];
+  S.petsAllowed = !!prof?.pets_allowed;
   S.totalItems = S.inv.reduce((n, r) => n + r.count, 0);
   S.byTier = {};
   for (const r of S.inv) { const it = S.catalog[baseItemId(r.item_id)]; if (it) S.byTier[it.r] = (S.byTier[it.r] || 0) + r.count; }
@@ -302,7 +316,7 @@ function wireEditor() {
   bio.oninput = () => { S.draft.bio = bio.value; touch(); renderPreview(); };
   const col = $("#colorInput");
   col.value = S.draft.accent_color || rgbHex(S.themes[S.draft.theme]?.accent || [61, 139, 253]);
-  col.oninput = () => { S.draft.accent_color = col.value; touch(); renderPreview(); };
+  col.oninput = () => { S.draft.accent_color = col.value; touch(); renderFramePet(); renderPreview(); };
   $("#colorReset").onclick = () => {
     S.draft.accent_color = null;
     // snap the swatch back to the theme's own accent, otherwise it keeps showing
@@ -321,7 +335,7 @@ function wireEditor() {
 }
 
 /* ---------- render everything ---------- */
-function renderAll() { renderThemes(); renderMyBg(); renderCardStyle(); renderTitles(); renderFeatured(); renderRarityFilter(); renderInv(); renderCombine(); renderPreview(); syncSaveState(); }
+function renderAll() { renderThemes(); renderMyBg(); renderFramePet(); renderCardStyle(); renderTitles(); renderFeatured(); renderRarityFilter(); renderInv(); renderCombine(); renderPreview(); syncSaveState(); }
 
 /* ============================================================
    Magic combining — a straight port of the bot's plan_combine().
@@ -642,7 +656,7 @@ function renderThemes() {
       if (!unlocked) return toast("🔒 Unlock this theme in Discord first (/theme).");
       S.draft.theme = id;
       if (!S.draft.accent_color) $("#colorInput").value = rgbHex(t.accent);
-      touch(); renderThemes(); renderMyBg(); renderPreview();
+      touch(); renderThemes(); renderMyBg(); renderFramePet(); renderPreview();
     };
     g.appendChild(cell);
   }
@@ -657,7 +671,7 @@ function renderThemes() {
       <div class="tc-name">🖼️ My Background</div>`;
     cell.onclick = () => {
       S.draft.theme = "custom";
-      touch(); renderThemes(); renderMyBg(); renderPreview();
+      touch(); renderThemes(); renderMyBg(); renderFramePet(); renderPreview();
     };
     g.appendChild(cell);
   }
@@ -798,6 +812,77 @@ async function removeMyBg() {
   mybgBusy = false;
   toast("Background removed.");
   await refreshAfterMyBg();
+}
+
+/* ============================================================
+   Avatar frame & card pet — supporter perks, mirrored from the bot
+   (profiles.frames_owned / profiles.pets_allowed). The picker only sets the
+   draft; the bot re-validates ownership when it applies a save, so the lock
+   here is pure UX. The frame catalogue is static (bot-side keys); pets come
+   from data/pets.json. Hidden entirely until the profile columns exist.
+   ============================================================ */
+const PROFILE_FRAMES = { gold: "Golden Ring", sparkle: "Pixie Sparkle", aurora: "Aurora Ring" };
+const FRAME_LOCK_MSG = "Unlock frames by supporting the club — /supporter in Discord";
+
+// The accent the card would actually use right now — custom colour if set,
+// otherwise the draft theme's own accent (same fallback as the colour input).
+const draftAccent = () =>
+  S.draft.accent_color || rgbHex(S.themes[S.draft.theme]?.accent || [61, 139, 253]);
+
+function renderFramePet() {
+  const panel = $("#framePetPanel");
+  if (panel) panel.style.display = S.hasFramePet ? "" : "none";
+  if (!S.hasFramePet) return;
+  const note = $("#framePetNote");
+  if (note) {
+    const bits = [];
+    if (S.draft.frame) bits.push(PROFILE_FRAMES[S.draft.frame] || S.draft.frame);
+    if (S.draft.pet) bits.push(S.pets?.[S.draft.pet]?.name || S.draft.pet);
+    note.textContent = bits.join(" · ");
+  }
+
+  // frames — swatches are little CSS mock-ups of each ring around the avatar
+  const row = $("#frameRow");
+  if (row) {
+    row.style.setProperty("--fr-accent", draftAccent());
+    const ring = (k) => k === "sparkle"
+      ? `<span class="fr-ring sparkle"><span class="sp">✦</span><span class="sp">✦</span></span>`
+      : `<span class="fr-ring${k === "none" ? "" : " " + k}"></span>`;
+    row.innerHTML = [["none", "None"], ...Object.entries(PROFILE_FRAMES)].map(([k, name]) => {
+      const owned = k === "none" || (S.framesOwned || []).includes(k);
+      const cur = (S.draft.frame || "none") === k;
+      return `<button class="frame-tile${cur ? " on" : ""}${owned ? "" : " locked"}" data-k="${k}">
+        ${owned ? "" : `<span class="lk">🔒</span>`}${ring(k)}<small>${esc(name)}</small></button>`;
+    }).join("");
+    row.querySelectorAll(".frame-tile").forEach((b) => b.onclick = () => {
+      const k = b.dataset.k;
+      if (k !== "none" && !(S.framesOwned || []).includes(k)) return toast(FRAME_LOCK_MSG);
+      S.draft.frame = k === "none" ? null : k;
+      touch(); renderFramePet(); renderPreview();
+    });
+  }
+
+  // pets — the grid only exists for supporters; everyone else gets the hint
+  const box = $("#petBox");
+  if (!box) return;
+  if (!S.petsAllowed) {
+    box.innerHTML = `<p class="hint" style="margin-top:2px">🔒 Card pets are a supporter
+      perk — see <b>/supporter</b> in Discord.</p>`;
+    return;
+  }
+  // pets.json paths are already portal-relative ("items/…"), so no imgUrl()
+  const pets = [["none", null], ...Object.entries(S.pets || {})];
+  box.innerHTML = `<div class="pet-grid">` + pets.map(([k, p]) => {
+    const cur = (S.draft.pet || "none") === k;
+    return `<button class="pet-tile${cur ? " on" : ""}" data-k="${esc(k)}">
+      ${p ? `<img src="${esc(p.img)}" alt="" loading="lazy">` : `<span class="none">∅</span>`}
+      <small>${esc(p ? p.name : "None")}</small></button>`;
+  }).join("") + `</div>`;
+  box.querySelectorAll(".pet-tile").forEach((b) => b.onclick = () => {
+    const k = b.dataset.k;
+    S.draft.pet = k === "none" ? null : k;
+    touch(); renderFramePet(); renderPreview();
+  });
 }
 
 function renderFeatured() {
@@ -1026,6 +1111,10 @@ async function save() {
     row.card_layout = S.draft.card_layout;
     row.card_stats = cardStatsWire();
   }
+  if (S.hasFramePet) {
+    row.frame = S.draft.frame || null;
+    row.pet = S.draft.pet || null;
+  }
   const { error } = await sb.from("profiles").upsert(row, { onConflict: "discord_id,guild_id" });
   if (error) return toast("Save failed: " + error.message, true);
   S.saved = JSON.stringify(S.draft);
@@ -1046,6 +1135,10 @@ async function doRender(auto) {
   if (S.hasCard) {
     preview.card_layout = S.draft.card_layout;
     preview.card_stats = cardStatsWire();
+  }
+  if (S.hasFramePet) {
+    preview.frame = S.draft.frame;
+    preview.pet = S.draft.pet;
   }
   const { data, error } = await sb.from("render_requests")
     .insert({ discord_id: S.discordId, guild_id: S.guild, preview }).select().single();

@@ -1,0 +1,38 @@
+{
+ "yeti": {
+  "name": "Baby Yeti",
+  "img": "items/82000_0.png"
+ },
+ "blahaj": {
+  "name": "Blahaj",
+  "img": "items/83513_0.png"
+ },
+ "moodeng": {
+  "name": "Moo Deng",
+  "img": "items/83419_0.png"
+ },
+ "puffle": {
+  "name": "Rainbow Puffle",
+  "img": "items/83585_0.png"
+ },
+ "dug": {
+  "name": "Dug",
+  "img": "items/74925_0.png"
+ },
+ "marie": {
+  "name": "Marie",
+  "img": "items/82870_0.png"
+ },
+ "sven": {
+  "name": "Baby Sven",
+  "img": "items/74712_0.png"
+ },
+ "zero": {
+  "name": "Zero",
+  "img": "items/82270_0.png"
+ },
+ "albert": {
+  "name": "Albert",
+  "img": "items/75321_0.png"
+ }
+}
