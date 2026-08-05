@@ -612,13 +612,21 @@ function renderTitles() {
   const box = $("#titlesBox"); if (!box || !S.hasHidden) return;
   const earned = earnedTitles();
   const hidden = new Set(S.draft.hidden_titles || []);
-  if (!earned.length) { box.innerHTML = `<span class="muted">No level titles earned yet — collect more to unlock them.</span>`; return; }
+  // Badge visibility rides the same hidden list under reserved keys the bot
+  // honours: "badge" = the gold supporter chip, "setbadges" = crimson
+  // set-completion badges. Shown for everyone; they only matter once earned.
+  const extras = [{ cat: "badge", title: "☕ Supporter badge" },
+                  { cat: "setbadges", title: "🏆 Set badges" }];
+  const chip = (cat, label) => {
+    const on = !hidden.has(cat);
+    return `<button class="title-chip${on ? " on" : ""}" data-cat="${cat}">${on ? "✓" : "＋"} ${esc(label)}</button>`;
+  };
   const shown = earned.filter((e) => !hidden.has(e.cat)).length;
-  $("#titlesNote").textContent = `${shown} of ${earned.length} shown · the card displays up to 4`;
-  box.innerHTML = earned.map((e) => {
-    const on = !hidden.has(e.cat);
-    return `<button class="title-chip${on ? " on" : ""}" data-cat="${e.cat}">${on ? "✓" : "＋"} ${esc(e.title)}</button>`;
-  }).join("");
+  $("#titlesNote").textContent = earned.length
+    ? `${shown} of ${earned.length} titles shown · the card displays up to 4`
+    : `badge toggles apply once you've earned them`;
+  box.innerHTML = extras.map((e) => chip(e.cat, e.title)).join("") +
+    earned.map((e) => chip(e.cat, e.title)).join("");
   box.querySelectorAll(".title-chip").forEach((b) => b.onclick = () => {
     const cat = b.dataset.cat, h = new Set(S.draft.hidden_titles || []);
     if (h.has(cat)) h.delete(cat); else h.add(cat);
