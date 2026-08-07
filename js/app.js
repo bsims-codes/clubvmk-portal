@@ -1270,7 +1270,7 @@ async function doRender(auto) {
     if (row && row.status !== "pending") finish(row);
     else { finishRender(); if (!auto) toast("Still waiting on the bot — is the render worker running?", true); }
     sb.removeChannel(chan);
-  }, 12000);
+  }, 25000);   // animated cards render slowly — 12s timed out real requests
 }
 function finishRender() {
   $("#cardPreview").classList.remove("rendering");
