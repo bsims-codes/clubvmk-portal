@@ -249,6 +249,8 @@ async function loadData() {
     const { error } = await sb.from("profiles").select("frame,pet,frames_owned,pets_allowed").limit(1);
     S.hasFramePet = !error;
   } catch (e) { S.hasFramePet = false; }
+  try { const { error } = await sb.from("profiles").select("presets").limit(1); S.hasPresets = !error; }
+  catch (e) { S.hasPresets = false; }
   S.layoutsOwned = Array.isArray(prof?.layouts_owned) ? prof.layouts_owned : [];
   S.draft = {
     theme: prof?.theme || CFG.DEFAULT_THEME,
@@ -276,11 +278,15 @@ async function loadData() {
   // frame/pet unlock state, mirrored from the bot the same way
   S.framesOwned = Array.isArray(prof?.frames_owned) ? prof.frames_owned : [];
   S.petsAllowed = !!prof?.pets_allowed;
+  S.presets = (prof?.presets && typeof prof.presets === "object" && !Array.isArray(prof.presets))
+    ? prof.presets : {};
   S.totalItems = S.inv.reduce((n, r) => n + r.count, 0);
   S.byTier = {};
   for (const r of S.inv) { const it = S.catalog[baseItemId(r.item_id)]; if (it) S.byTier[it.r] = (S.byTier[it.r] || 0) + r.count; }
   wireEditor();
   renderAll();
+  renderPresets();
+  wirePresets();
   doRender(true);   // show the real, true-size card straight away
 }
 
@@ -1092,6 +1098,99 @@ function toggleFeature(id) {
    /profile exactly. renderPreview() is kept as a no-op so edit handlers can call
    it harmlessly; the actual refresh is the debounced real render from touch(). */
 function renderPreview() { /* intentionally empty — the exact card is the preview */ }
+
+/* ---------- saved looks (presets) — the same dict Discord's /preset uses ----
+   Stored in the bot's SQLite shape (CSV strings) so both sides read one
+   format: featured/hidden_titles/card_stats are CSV, color is "#rrggbb". */
+const PRESET_MAX = 8;
+
+function draftToPreset() {
+  const p = {};
+  if (S.draft.theme) p.theme = S.draft.theme;
+  if (S.draft.featured?.length) p.featured = S.draft.featured.join(",");
+  if (S.draft.accent_color) p.color = S.draft.accent_color;
+  if (S.draft.bio) p.bio = S.draft.bio;
+  if (S.hasFramePet && S.draft.frame) p.frame = S.draft.frame;
+  if (S.hasFramePet && S.draft.pet) p.pet = S.draft.pet;
+  if (S.hasCard) {
+    if (S.draft.card_layout) p.card_layout = S.draft.card_layout;
+    const all = CARD_HIGHLIGHTS.map(([k]) => k);
+    const shown = S.draft.card_stats || [];
+    if (!shown.length) p.card_stats = CARD_STATS_NONE;
+    else if (shown.length !== all.length) p.card_stats = shown.slice().sort().join(",");
+  }
+  if (S.hasHidden && S.draft.hidden_titles?.length)
+    p.hidden_titles = S.draft.hidden_titles.join(",");
+  return p;
+}
+
+function presetToDraft(p) {
+  S.draft.theme = p.theme || CFG.DEFAULT_THEME;
+  S.draft.accent_color = p.color || null;
+  S.draft.featured = clampFeatured((p.featured || "").split(",").filter(Boolean));
+  S.draft.bio = p.bio || "";
+  if (S.hasFramePet) { S.draft.frame = p.frame || null; S.draft.pet = p.pet || null; }
+  if (S.hasCard) {
+    if (p.card_layout && CARD_LAYOUTS[p.card_layout]) S.draft.card_layout = p.card_layout;
+    const all = CARD_HIGHLIGHTS.map(([k]) => k);
+    S.draft.card_stats = p.card_stats === CARD_STATS_NONE ? []
+      : p.card_stats ? p.card_stats.split(",").filter((k) => all.includes(k))
+      : all.slice();
+  }
+  if (S.hasHidden)
+    S.draft.hidden_titles = (p.hidden_titles || "").split(",").filter(Boolean);
+}
+
+async function persistPresets() {
+  const { error } = await sb.from("profiles").upsert({
+    discord_id: S.discordId, guild_id: S.guild, presets: S.presets,
+    updated_by: "portal", updated_at: new Date().toISOString(),
+  }, { onConflict: "discord_id,guild_id" });
+  if (error) toast("Preset save failed: " + error.message, true);
+  return !error;
+}
+
+function renderPresets() {
+  const panel = $("#presetsPanel");
+  if (panel) panel.style.display = S.hasPresets ? "" : "none";
+  const box = $("#presetsBox");
+  if (!box || !S.hasPresets) return;
+  const names = Object.keys(S.presets || {});
+  box.innerHTML = names.length ? names.map((n) => `
+    <div class="preset-row">
+      <b>${esc(n)}</b>
+      <span>
+        <button class="ghost" type="button" data-apply="${esc(n)}">Wear it</button>
+        <button class="ghost" type="button" data-del="${esc(n)}" title="Delete">✕</button>
+      </span>
+    </div>`).join("") : `<p class="hint">No saved looks yet — dress the card up, then save it here.</p>`;
+  box.querySelectorAll("[data-apply]").forEach((b) => (b.onclick = () => {
+    presetToDraft(S.presets[b.dataset.apply] || {});
+    renderAll(); touch();
+    toast(`Wearing “${b.dataset.apply}” — hit Save to make it live.`);
+  }));
+  box.querySelectorAll("[data-del]").forEach((b) => (b.onclick = async () => {
+    delete S.presets[b.dataset.del];
+    if (await persistPresets()) renderPresets();
+  }));
+}
+
+function wirePresets() {
+  const btn = $("#presetSaveBtn");
+  if (!btn) return;
+  btn.onclick = async () => {
+    const name = ($("#presetName").value || "").trim().slice(0, 24);
+    if (!name) return toast("Name the look first!", true);
+    if (!(name in S.presets) && Object.keys(S.presets).length >= PRESET_MAX)
+      return toast(`Max ${PRESET_MAX} looks — delete one first.`, true);
+    S.presets[name] = draftToPreset();
+    if (await persistPresets()) {
+      $("#presetName").value = "";
+      renderPresets();
+      toast(`Saved “${name}” ✨`);
+    }
+  };
+}
 
 /* ---------- save ---------- */
 let renderTimer;

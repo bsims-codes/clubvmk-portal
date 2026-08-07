@@ -137,6 +137,26 @@
         </div>
       </details>
 
+      <details class="panel" id="presetsPanel" style="display:none">
+        <summary class="panel-head"><h2>Saved looks</h2><span class="muted">one-click profile presets</span></summary>
+        <div class="panel-body">
+          <style>
+            .preset-row{display:flex;justify-content:space-between;align-items:center;
+              padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+            .preset-new{display:flex;gap:8px;margin-top:10px}
+            #presetName{flex:1;min-width:0}
+          </style>
+          <div id="presetsBox"></div>
+          <div class="preset-new">
+            <input id="presetName" maxlength="24" placeholder="Name this look… (e.g. spooky)" />
+            <button id="presetSaveBtn" class="ghost" type="button">Save current look</button>
+          </div>
+          <p class="hint">A look snapshots your theme, featured items, pet, frame, color, bio and
+            layout. “Wear it” loads it into the editor — hit Save to make it live. The same
+            presets work in Discord via <code>/preset</code>.</p>
+        </div>
+      </details>
+
       <!-- Magic combining — collapsed like the rest of this column; the bot does
            the actual fusing. -->
       <details class="panel combine-panel" id="combinePanel">
