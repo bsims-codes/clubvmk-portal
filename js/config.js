@@ -6,4 +6,7 @@ window.CLUBVMK = {
   // Remy's kitchen — mirrors REMY_COMMONS_NEEDED in the bot's config.py. How
   // many commons the pot takes; the bot does the real roll when it cooks.
   REMY_NEED: 3,
+  // Dressing room beta. Cosmetic gate only — it keeps the page from teasing
+  // people it won't work for. The bot enforces AVATAR_BETA_IDS for real.
+  AVATAR_BETA: ["886570059974201405"],
 };

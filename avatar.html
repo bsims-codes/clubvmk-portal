@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>CLUBVMK — Dressing Room</title>
+<meta name="description" content="Dress a MyVMK avatar in the clothes you've collected." />
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="apple-touch-icon" href="favicon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/styles.css" />
+<style>
+  .kw{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:26px clamp(16px,4vw,44px) 70px}
+  .kw h1{font-family:var(--font-d);font-size:clamp(26px,4vw,36px);margin:0 0 6px}
+  .kw .lede{color:var(--muted);margin:0 0 20px;max-width:64ch}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:18px;margin-bottom:16px;box-shadow:var(--shadow)}
+  .card h2{font-family:var(--font-d);font-size:19px;margin:0 0 4px}
+  .card .hint{color:var(--faint);font-size:12.5px;margin:0 0 14px}
+
+  /* doll on the left, wardrobe on the right — the doll sticks so scrolling a
+     long wardrobe never hides what you're dressing */
+  .room{display:grid;grid-template-columns:340px 1fr;gap:16px;align-items:start}
+  @media(max-width:900px){.room{grid-template-columns:1fr}}
+  .dollcard{position:sticky;top:78px}
+  @media(max-width:900px){.dollcard{position:static}}
+
+  .doll{min-height:330px;display:grid;place-items:center;background:var(--bg);
+    border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+  .doll img{max-width:100%;max-height:320px;image-rendering:auto}
+  .doll.rendering{opacity:.45}
+  .doll .ph{color:var(--faint);font-size:13px;text-align:center;line-height:1.6}
+
+  .picks{font-size:12.5px;color:var(--muted);line-height:1.75;margin:0 0 12px}
+  .picks .row{display:flex;justify-content:space-between;gap:10px}
+  .picks .sl{color:var(--faint);text-transform:capitalize}
+  .picks .nm{text-align:right}
+
+  .ctl{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+  .ctl label{font-size:12px;color:var(--faint);display:block;margin-bottom:3px}
+  .ctl select{background:var(--bg2);color:var(--ink);border:1px solid var(--line);
+    border-radius:9px;padding:7px 9px;font:inherit;font-size:13px}
+  .savebtn{width:100%;justify-content:center;display:flex;font-size:15px;padding:13px}
+  .savebtn:disabled{opacity:.45;cursor:default;transform:none}
+
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+  .tab{background:var(--bg2);border:1px solid var(--line);color:var(--muted);
+    border-radius:999px;padding:6px 13px;font-size:13px;cursor:pointer;text-transform:capitalize}
+  .tab.on{background:rgba(240,178,60,.14);border-color:rgba(240,178,60,.5);color:var(--gold-soft)}
+  .tab .n{color:var(--faint);font-size:11.5px;margin-left:5px}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px}
+  .tile{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:8px;
+    cursor:pointer;text-align:center;transition:.13s}
+  .tile:hover{border-color:rgba(240,178,60,.5);transform:translateY(-2px)}
+  .tile.on{border-color:var(--gold);background:rgba(240,178,60,.10)}
+  .tile img{width:100%;height:62px;object-fit:contain}
+  .tile .nm{font-size:11.5px;color:var(--muted);margin-top:5px;line-height:1.35;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .empty{color:var(--faint);font-size:13px;padding:18px 0}
+</style>
+</head>
+<body>
+<div class="stars" aria-hidden="true"></div>
+<div class="aurora" aria-hidden="true"></div>
+
+<header class="topbar">
+  <a class="brand" href="./">
+    <span class="brand-mark">✦</span>
+    <span class="brand-word">CLUB<em>VMK</em></span>
+    <span class="brand-sub">Dressing Room</span>
+  </a>
+  <div id="authSlot" class="auth-slot">
+    <a class="btn ghost tiny" href="./">← Profile</a>
+    <button id="signInBtn" class="btn ghost">Sign in with Discord</button>
+    <button id="signOutBtn" class="btn ghost hidden">Sign out</button>
+  </div>
+</header>
+
+<main class="kw">
+  <div id="gate" class="gate">
+    <h1>🧍 Dressing Room</h1>
+    <p class="muted" id="gateMsg">Sign in with Discord to open the dressing room.</p>
+  </div>
+
+  <div id="panel" class="hidden">
+    <h1>🧍 Dressing Room</h1>
+    <p class="lede">Dress an avatar in the clothes you've actually collected. The
+      bot renders the real sprite art, so what you see here is what
+      <code>/avatar</code> shows in Discord.</p>
+
+    <div class="ctrls" id="guildRow" style="margin-bottom:16px"></div>
+
+    <div class="room">
+      <div class="card dollcard">
+        <h2>Your avatar</h2>
+        <p class="hint" id="dollHint">Pick something from the wardrobe.</p>
+        <div class="doll" id="doll"><div class="ph">Loading…</div></div>
+        <div class="ctl">
+          <div><label for="tone">Skin tone</label>
+            <select id="tone">
+              <option value="default">Default</option>
+              <option value="light">Light</option>
+              <option value="tan">Tan</option>
+              <option value="deep">Deep</option>
+              <option value="olive">Olive</option>
+              <option value="rose">Rose</option>
+            </select></div>
+          <div><label for="facing">Facing</label>
+            <select id="facing">
+              <option value="4">Front</option>
+              <option value="3" selected>¾ front</option>
+              <option value="2">Side</option>
+              <option value="1">¾ back</option>
+              <option value="0">Back</option>
+            </select></div>
+        </div>
+        <div id="picks" class="picks"></div>
+        <button id="saveBtn" class="btn savebtn">Save outfit</button>
+      </div>
+
+      <div class="card">
+        <h2>Wardrobe</h2>
+        <p class="hint" id="wardrobeHint"></p>
+        <div class="tabs" id="tabs"></div>
+        <div class="grid" id="grid"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div id="toast" class="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/config.js"></script>
+<script src="js/avatar.js"></script>
+</body>
+</html>
