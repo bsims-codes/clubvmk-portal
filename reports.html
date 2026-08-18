@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CLUBVMK · Reports</title>
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/styles.css" />
+<style>
+  .aw { max-width: 1000px; margin: 0 auto; padding: 24px 18px 90px; position: relative; z-index: 1; }
+  .ahead { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 4px; flex-wrap: wrap; }
+  .ahead h1 { font-family: "Fraunces", serif; font-size: 32px; margin: 0; }
+  .navlinks a { color: var(--muted); text-decoration: none; margin-left: 14px; font-size: 14px; }
+  .navlinks a:hover { color: var(--gold); }
+  .gate { text-align: center; padding: 80px 20px; }
+  .subtle { color: var(--faint); font-size: 13.5px; margin: 0 0 22px; }
+  .btn { padding: 8px 14px; border-radius: 9px; border: 1px solid var(--line); background: transparent; color: #cdd; font: inherit; font-weight: 600; cursor: pointer; }
+  .btn.gold { background: var(--gold); color: #201800; border: none; }
+  .btn.sm { padding: 5px 10px; font-size: 12.5px; font-weight: 600; }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .muted2 { color: var(--faint); }
+
+  /* filter bar */
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+  .filters button { padding: 6px 13px; border-radius: 99px; border: 1px solid var(--line);
+                    background: transparent; color: var(--muted); font: inherit;
+                    font-size: 13px; cursor: pointer; transition: .15s; }
+  .filters button:hover { border-color: var(--gold); color: var(--ink); }
+  .filters button[aria-pressed="true"] { background: var(--gold); color: #201800;
+                                         border-color: var(--gold); font-weight: 600; }
+  .filters .count { opacity: .65; margin-left: 5px; font-variant-numeric: tabular-nums; }
+
+  /* one report */
+  .rep { background: #12162a; border: 1px solid var(--line); border-radius: 14px;
+         padding: 16px 18px; margin-bottom: 12px; }
+  .rep.is-open { border-color: #4a5480; }
+  .rhead { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+  .rhead h2 { font-family: "Fraunces", serif; font-size: 17px; margin: 0; flex: 1; min-width: 220px; line-height: 1.35; }
+  .rid { color: var(--faint); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  .rmeta { color: var(--faint); font-size: 12.5px; margin: 6px 0 0; }
+  .rbody { color: #c9cee6; font-size: 13.5px; line-height: 1.6; margin: 11px 0 0;
+           white-space: pre-wrap; word-break: break-word; }
+  .rres { margin: 11px 0 0; padding: 9px 12px; border-radius: 9px; background: #0e1226;
+          border: 1px solid var(--line); font-size: 13px; color: #bcd8c6; }
+
+  .pill { display: inline-block; padding: 2px 9px; border-radius: 8px; font-size: 11px;
+          font-weight: 600; white-space: nowrap; }
+  .s-open     { background: #5a3a00; color: #ffcf6a; }
+  .s-triaged  { background: #1e3350; color: #8fc4ff; }
+  .s-planned  { background: #2a2350; color: #b9a8ff; }
+  .s-building { background: #14384a; color: #7fdcf0; }
+  .s-shipped  { background: #123a20; color: #84e0a0; }
+  .s-declined { background: #3a2028; color: #e0a0ac; }
+  .k-bug      { background: #4a1420; color: #ff9aa8; }
+  .k-request  { background: #123048; color: #8ecbff; }
+  .k-idea     { background: #2e1e4a; color: #cba8ff; }
+
+  /* triage panel */
+  .triage { margin: 12px 0 0; padding: 11px 13px; border-radius: 10px;
+            background: #0d1124; border: 1px solid var(--line); font-size: 13px; }
+  .triage h3 { font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em;
+               color: var(--faint); margin: 0 0 7px; font-weight: 600; }
+  .triage dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; }
+  .triage dt { color: var(--faint); font-size: 12px; }
+  .triage dd { margin: 0; color: #cdd6ee; font-size: 12.8px; }
+
+  /* actions */
+  .racts { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; margin: 13px 0 0;
+           padding-top: 12px; border-top: 1px solid var(--line); }
+  .racts input { flex: 1; min-width: 190px; padding: 7px 11px; border-radius: 9px;
+                 border: 1px solid var(--line); background: #0c1020; color: #eef; font: inherit;
+                 font-size: 13px; }
+  .hint { font-size: 12px; color: var(--faint); margin: 8px 0 0; }
+  .empty { text-align: center; padding: 60px 20px; color: var(--faint); }
+</style>
+</head>
+<body>
+<div class="stars" aria-hidden="true"></div>
+<div class="aurora" aria-hidden="true"></div>
+
+<main class="aw">
+  <div id="gate" class="gate">
+    <h1>🪲 Reports</h1>
+    <p class="muted" id="gateMsg">Sign in with Discord to continue.</p>
+    <button id="signInBtn" class="btn gold" style="margin-top:14px">Sign in with Discord</button>
+  </div>
+
+  <div id="panel" style="display:none">
+    <div class="ahead">
+      <h1>🪲 Reports</h1>
+      <div class="navlinks">
+        <a href="admin-home.html">← Admin</a>
+        <a id="signOutBtn" href="#">Sign out</a>
+      </div>
+    </div>
+    <p class="subtle">Everything players have filed with <code>/report</code> in Discord.
+      Marking one <b>Shipped</b> or <b>Declined</b> posts publicly in the reports
+      channel and tags whoever filed it — so write the note for them, not for you.</p>
+
+    <div class="filters" id="filters"></div>
+    <div id="list"><p class="muted2">Loading…</p></div>
+  </div>
+</main>
+
+<div id="toast" class="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/reports.js"></script>
+</body>
+</html>
